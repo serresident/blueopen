@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">BlueOpen PC Unlocker</string>
+    <string name="title_paired_devices">Paired Bluetooth Devices</string>
+    <string name="title_settings">Security Settings</string>
+    <string name="btn_lock">Lock PC</string>
+    <string name="btn_unlock">Unlock PC</string>
+    <string name="hint_password">Enter Pairing Password</string>
+    <string name="status_disconnected">Disconnected</string>
+    <string name="status_connecting">Connecting...</string>
+    <string name="status_authenticating">Authenticating...</string>
+    <string name="status_unlocked">Successfully Unlocked</string>
+    <string name="status_locked">Successfully Locked</string>
+    <string name="status_failed">Authentication Failed</string>
+</resources>

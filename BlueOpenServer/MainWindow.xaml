@@ -1,0 +1,196 @@
+<Window x:Class="BlueOpenServer.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="BlueOpen - Bluetooth PC Unlocker" 
+        Height="550" Width="700"
+        Background="#0f0f12"
+        Foreground="White"
+        WindowStartupLocation="CenterScreen"
+        Closing="Window_Closing"
+        Loaded="Window_Loaded">
+
+    <Window.Resources>
+        <!-- Modern Card Style -->
+        <Style x:Key="ModernCard" TargetType="Border">
+            <Setter Property="Background" Value="#16161e"/>
+            <Setter Property="BorderBrush" Value="#22222d"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="20"/>
+            <Setter Property="Margin" Value="0,0,0,15"/>
+        </Style>
+
+        <!-- Modern Button Style -->
+        <Style x:Key="ModernButton" TargetType="Button">
+            <Setter Property="Background" Value="#3f51b5"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="20,10"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontFamily" Value="Segoe UI Semibold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Style.Resources>
+                <Style TargetType="Border">
+                    <Setter Property="CornerRadius" Value="8"/>
+                </Style>
+            </Style.Resources>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#4f63d6"/>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="Background" Value="#303f9f"/>
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Background" Value="#33333e"/>
+                    <Setter Property="Foreground" Value="#777777"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Secondary Button Style -->
+        <Style x:Key="SecondaryButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#333345"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="15,8"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Style.Resources>
+                <Style TargetType="Border">
+                    <Setter Property="CornerRadius" Value="6"/>
+                </Style>
+            </Style.Resources>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#222230"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Modern TextBox -->
+        <Style x:Key="ModernTextBox" TargetType="TextBox">
+            <Setter Property="Background" Value="#0b0b0d"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#2a2a35"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="CaretBrush" Value="White"/>
+            <Style.Resources>
+                <Style TargetType="Border">
+                    <Setter Property="CornerRadius" Value="6"/>
+                </Style>
+            </Style.Resources>
+            <Style.Triggers>
+                <Trigger Property="IsKeyboardFocused" Value="True">
+                    <Setter Property="BorderBrush" Value="#3f51b5"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="25">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Grid Grid.Row="0" Margin="0,0,0,25">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            
+            <StackPanel Grid.Column="0">
+                <TextBlock Text="BlueOpen Server" FontSize="26" FontWeight="Bold" FontFamily="Segoe UI" Foreground="#ffffff"/>
+                <TextBlock Text="Unlock your PC securely with your Android phone over Bluetooth" FontSize="13" Foreground="#8e8e93" Margin="0,4,0,0"/>
+            </StackPanel>
+
+            <Button Grid.Column="1" 
+                    Name="BtnLock" 
+                    Content="🔒 Lock PC Now" 
+                    Style="{StaticResource ModernButton}" 
+                    Background="#d32f2f" 
+                    Click="BtnLock_Click"/>
+        </Grid>
+
+        <!-- Main Body split into Configuration and Log -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="300"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Left column: Configuration Panel -->
+            <StackPanel Grid.Column="0" Margin="0,0,20,0">
+                <!-- Status Card -->
+                <Border Style="{StaticResource ModernCard}">
+                    <StackPanel>
+                        <TextBlock Text="SERVER STATUS" FontSize="11" FontWeight="Bold" Foreground="#8e8e93" Margin="0,0,0,12"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Ellipse Grid.Column="0" Width="12" Height="12" Fill="#d32f2f" VerticalAlignment="Center" Name="IndicatorDot" Margin="0,0,10,0"/>
+                            <TextBlock Grid.Column="1" Text="Stopped" FontSize="16" FontWeight="SemiBold" Name="TxtStatus" VerticalAlignment="Center"/>
+                        </Grid>
+                        
+                        <StackPanel Orientation="Horizontal" Margin="0,15,0,0">
+                            <Button Name="BtnStart" Content="Start" Style="{StaticResource SecondaryButton}" Margin="0,0,10,0" Width="80" Click="BtnStart_Click"/>
+                            <Button Name="BtnStop" Content="Stop" Style="{StaticResource SecondaryButton}" Width="80" Click="BtnStop_Click" IsEnabled="False"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Password Settings Card -->
+                <Border Style="{StaticResource ModernCard}">
+                    <StackPanel>
+                        <TextBlock Text="SECURITY PASSWORD" FontSize="11" FontWeight="Bold" Foreground="#8e8e93" Margin="0,0,0,12"/>
+                        <TextBlock Text="Enter the password used to pair the Android app:" FontSize="12" Foreground="#8e8e93" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                        
+                        <TextBox Name="TxtPassword" Style="{StaticResource ModernTextBox}" Margin="0,0,0,10" GotFocus="TxtPassword_GotFocus" LostFocus="TxtPassword_LostFocus"/>
+                        
+                        <Button Name="BtnSavePassword" Content="Save Password" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Left" Click="BtnSavePassword_Click"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- System Options Card -->
+                <Border Style="{StaticResource ModernCard}">
+                    <StackPanel>
+                        <TextBlock Text="SYSTEM OPTIONS" FontSize="11" FontWeight="Bold" Foreground="#8e8e93" Margin="0,0,0,12"/>
+                        <CheckBox Name="ChkAutostart" Content="Start with Windows" Foreground="White" Checked="ChkAutostart_Checked" Unchecked="ChkAutostart_Unchecked" Cursor="Hand"/>
+                        <CheckBox Name="ChkAutoLockOnBoot" Content="Lock PC immediately on start" Foreground="White" Margin="0,10,0,0" Checked="ChkAutoLockOnBoot_Checked" Unchecked="ChkAutoLockOnBoot_Unchecked" Cursor="Hand"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- Right column: Log Panel -->
+            <Border Grid.Column="1" Style="{StaticResource ModernCard}" Padding="15">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Grid.Row="0" Text="CONNECTION ACTIVITY LOG" FontSize="11" FontWeight="Bold" Foreground="#8e8e93" Margin="0,0,0,10"/>
+                    
+                    <TextBox Grid.Row="1" 
+                             Name="TxtLog" 
+                             Background="#0b0b0d" 
+                             Foreground="#82e0aa" 
+                             BorderBrush="#252535" 
+                             BorderThickness="1" 
+                             IsReadOnly="True" 
+                             TextWrapping="Wrap" 
+                             VerticalScrollBarVisibility="Auto"
+                             FontFamily="Consolas" 
+                             FontSize="12" 
+                             Padding="8"/>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>
