@@ -1,0 +1,13 @@
+Windows Registry Editor Version 5.00
+
+; Register COM object CLSID
+[HKEY_CLASSES_ROOT\CLSID\{8a3b8d4f-3c8b-4a5f-9e8a-0c2d3b4a5f6e}]
+@="BlueOpen Credential Provider"
+
+[HKEY_CLASSES_ROOT\CLSID\{8a3b8d4f-3c8b-4a5f-9e8a-0c2d3b4a5f6e}\InprocServer32]
+@="C:\\Windows\\System32\\BlueOpenProvider.dll"
+"ThreadingModel"="Apartment"
+
+; Register as Windows Credential Provider
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\Credential Providers\{8a3b8d4f-3c8b-4a5f-9e8a-0c2d3b4a5f6e}]
+@="BlueOpen Credential Provider"

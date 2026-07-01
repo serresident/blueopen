@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("BlueOpenServer")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+dc67a1317fc4ad1729a29a8752df6e21d71ba49f")]
 [assembly: System.Reflection.AssemblyProductAttribute("BlueOpenServer")]
 [assembly: System.Reflection.AssemblyTitleAttribute("BlueOpenServer")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

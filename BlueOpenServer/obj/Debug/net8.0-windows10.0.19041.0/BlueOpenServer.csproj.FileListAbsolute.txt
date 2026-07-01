@@ -9,8 +9,6 @@ C:\Users\erch\Мой диск\1 for ai\blueopen\BlueOpenServer\bin\Debug\net8.0-
 C:\Users\erch\Мой диск\1 for ai\blueopen\BlueOpenServer\bin\Debug\net8.0-windows10.0.19041.0\BlueOpenServer.pdb
 C:\Users\erch\Мой диск\1 for ai\blueopen\BlueOpenServer\bin\Debug\net8.0-windows10.0.19041.0\Microsoft.Windows.SDK.NET.dll
 C:\Users\erch\Мой диск\1 for ai\blueopen\BlueOpenServer\bin\Debug\net8.0-windows10.0.19041.0\WinRT.Runtime.dll
-C:\Users\erch\Мой диск\1 for ai\blueopen\BlueOpenServer\obj\Debug\net8.0-windows10.0.19041.0\LockWindow.baml
-C:\Users\erch\Мой диск\1 for ai\blueopen\BlueOpenServer\obj\Debug\net8.0-windows10.0.19041.0\LockWindow.g.cs
 C:\Users\erch\Мой диск\1 for ai\blueopen\BlueOpenServer\obj\Debug\net8.0-windows10.0.19041.0\BlueOpenServer.g.resources
 C:\Users\erch\Мой диск\1 for ai\blueopen\BlueOpenServer\obj\Debug\net8.0-windows10.0.19041.0\BlueOpenServer.GeneratedMSBuildEditorConfig.editorconfig
 C:\Users\erch\Мой диск\1 for ai\blueopen\BlueOpenServer\obj\Debug\net8.0-windows10.0.19041.0\BlueOpenServer.AssemblyInfoInputs.cache

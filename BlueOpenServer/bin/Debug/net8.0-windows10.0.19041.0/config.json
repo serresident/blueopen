@@ -1,5 +1,8 @@
 {
   "Password": "123456",
   "Autostart": false,
-  "AutoLockOnBoot": false
+  "AutoLockOnBoot": false,
+  "WinUsername": "erch",
+  "WinDomain": "MSI-NOUT",
+  "WinPassword": "123"
 }
