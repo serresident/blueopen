@@ -260,6 +260,18 @@ HRESULT CBlueOpenCredential::GetCheckboxValue(_In_ DWORD dwFieldID, _Out_ BOOL* 
 
 HRESULT CBlueOpenCredential::SetStringValue(_In_ DWORD dwFieldID, _In_ PCWSTR pszVal)
 {
+    if (dwFieldID == FID_USERNAME)
+    {
+        wcscpy_s(_szUsername, pszVal);
+        _hasCredentials = TRUE;
+        return S_OK;
+    }
+    else if (dwFieldID == FID_PASSWORD)
+    {
+        wcscpy_s(_szPassword, pszVal);
+        _hasCredentials = TRUE;
+        return S_OK;
+    }
     return E_NOTIMPL;
 }
 
@@ -298,7 +310,8 @@ HRESULT CBlueOpenCredential::GetSerialization(
         if (SUCCEEDED(hr))
         {
             *pcpgsr = CPGSR_RETURN_CREDENTIALS;
-            _hasCredentials = FALSE; // Reset state
+            // Keep _hasCredentials as TRUE so SetSelected can detect it and set pbAutoSubmit = TRUE.
+            // It will be reset to FALSE in ReportResult or SetDeselected.
             return S_OK;
         }
         else

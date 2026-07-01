@@ -1,0 +1,50 @@
+## Ignore Visual Studio temporary files, build results, and user settings
+
+# User-specific files
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Bb]in/
+[Oo]bj/
+[Ii]ntermediate/
+
+# Visual Studio 2015/2017 cache/options directory
+.vs/
+
+# Compiled files
+*.obj
+*.pch
+*.pdb
+*.ilk
+*.exe
+*.dll
+*.lib
+*.exp
+*.iobj
+*.ipdb
+
+# MSBuild / Compiler logs and build states
+*.tlog
+*.lastbuildstate
+*.unsuccessfulbuild
+BuildLog.htm
+
+# SQL Server Compact Edition database files
+*.sdf
+
+# Backup files
+*.bak
+
+# Others
+ipch/
+$Recycle.Bin/
+Thumbs.db
+ehthumbs.db
+Desktop.ini
