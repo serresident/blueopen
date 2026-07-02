@@ -25,13 +25,13 @@ if ($LASTEXITCODE -eq 0) {
     Write-Host "`nInstaller build failed." -ForegroundColor Red
 }
 
-Write-Host "3. Copying Android APK to Updates folder..." -ForegroundColor Cyan
+Write-Host "3. Copying Android APK to ReleaseBuild folder for GitHub..." -ForegroundColor Cyan
 $ApkSource = ".\BlueOpenClient\app\build\outputs\apk\release\app-release.apk"
-$ApkTarget = ".\Updates\BlueOpenClient.apk"
+$ApkTarget = ".\ReleaseBuild\BlueOpenClient.apk"
 
 if (Test-Path $ApkSource) {
     Copy-Item -Path $ApkSource -Destination $ApkTarget -Force
-    Write-Host "Successfully copied Android APK to Updates folder!" -ForegroundColor Green
+    Write-Host "Successfully copied Android APK to ReleaseBuild folder!" -ForegroundColor Green
 } else {
     Write-Host "Release APK not found at $ApkSource. Skipping APK copy." -ForegroundColor Yellow
 }

@@ -216,7 +216,7 @@ namespace BlueOpenServer
                 
                 if (updateInfo != null)
                 {
-                    var result = MessageBox.Show($"New version {updateInfo.version} is available!\n\nDo you want to update now?", "Update Available", MessageBoxButton.YesNo, MessageBoxImage.Information);
+                    var result = MessageBox.Show($"New version {updateInfo.tag_name} is available!\n\nDo you want to update now?", "Update Available", MessageBoxButton.YesNo, MessageBoxImage.Information);
                     if (result == MessageBoxResult.Yes)
                     {
                         BtnCheckUpdates.Content = "Downloading...";
@@ -255,29 +255,36 @@ namespace BlueOpenServer
 
             try
             {
-                var updateInfo = await UpdateManager.CheckForUpdatesAsync();
+                var release = await UpdateManager.GetLatestReleaseAsync();
                 
-                // If checking fails but we still want to show something, we could cache the URL, 
-                // but checking the remote json guarantees the latest APK.
-                if (updateInfo != null && !string.IsNullOrEmpty(updateInfo.clientApkId))
+                if (release != null && release.assets != null)
                 {
-                    string downloadUrl = $"https://drive.google.com/uc?export=download&id={updateInfo.clientApkId}";
-                    
-                    // Generate QR Code
-                    using (QRCodeGenerator qrGenerator = new QRCodeGenerator())
-                    using (QRCodeData qrCodeData = qrGenerator.CreateQrCode(downloadUrl, QRCodeGenerator.ECCLevel.Q))
-                    using (QRCode qrCode = new QRCode(qrCodeData))
-                    using (Bitmap qrBitmap = qrCode.GetGraphic(20))
+                    var apkAsset = Array.Find(release.assets, a => a.name.EndsWith(".apk", StringComparison.OrdinalIgnoreCase));
+                    if (apkAsset != null)
                     {
-                        ImgQrCode.Source = BitmapToImageSource(qrBitmap);
-                        QrCodeContainer.Visibility = Visibility.Visible;
+                        string finalDownloadUrl = apkAsset.browser_download_url;
+                        
+                        // Generate QR Code
+                        using (QRCodeGenerator qrGenerator = new QRCodeGenerator())
+                        using (QRCodeData qrCodeData = qrGenerator.CreateQrCode(finalDownloadUrl, QRCodeGenerator.ECCLevel.Q))
+                        using (QRCode qrCode = new QRCode(qrCodeData))
+                        using (Bitmap qrBitmap = qrCode.GetGraphic(20))
+                        {
+                            ImgQrCode.Source = BitmapToImageSource(qrBitmap);
+                            QrCodeContainer.Visibility = Visibility.Visible;
+                        }
+                        
+                        BtnGetClient.Content = "Scan QR Code Below";
                     }
-                    
-                    BtnGetClient.Content = "Scan QR Code Below";
+                    else
+                    {
+                        MessageBox.Show("Could not find Android Client link in the release assets.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                        BtnGetClient.Content = "Get Android Client";
+                    }
                 }
                 else
                 {
-                    MessageBox.Show("Could not find Android Client link in the remote configuration.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBox.Show("Could not find a valid release on GitHub.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                     BtnGetClient.Content = "Get Android Client";
                 }
             }

@@ -8,50 +8,69 @@ using System.Windows;
 
 namespace BlueOpenServer
 {
-    public class VersionInfo
+    public class GithubAsset
     {
-        public string version { get; set; } = "";
-        public string downloadId { get; set; } = "";
-        public string clientApkId { get; set; } = "";
+        public string name { get; set; } = "";
+        public string browser_download_url { get; set; } = "";
+    }
+
+    public class GithubRelease
+    {
+        public string tag_name { get; set; } = "";
+        public GithubAsset[] assets { get; set; } = Array.Empty<GithubAsset>();
     }
 
     public static class UpdateManager
     {
-        // ВАЖНО: Замените эту ссылку на прямую ссылку (raw) на ваш файл version.json в Google Drive (или на GitHub/сервере).
-        // Для Google Drive прямая ссылка на скачивание имеет вид: https://drive.google.com/uc?export=download&id=ВАШ_ID_ФАЙЛА
-        private const string VersionUrl = "https://drive.google.com/uc?export=download&id=ЗАМЕНИТЕ_НА_ID_ФАЙЛА_VERSION_JSON";
+        private const string GithubApiUrl = "https://api.github.com/repos/serresident/blueopen/releases/latest";
         
         public const string CurrentVersion = "1.0.0";
 
-        public static async Task<VersionInfo?> CheckForUpdatesAsync()
+        public static async Task<GithubRelease?> GetLatestReleaseAsync()
         {
             try
             {
                 using var client = new HttpClient();
-                // Add a dummy user agent
-                client.DefaultRequestHeaders.Add("User-Agent", "BlueOpenServer Updater");
+                // GitHub API requires a User-Agent header
+                client.DefaultRequestHeaders.Add("User-Agent", "BlueOpenServer");
                 
-                var json = await client.GetStringAsync(VersionUrl);
-                var info = JsonSerializer.Deserialize<VersionInfo>(json);
-                
-                if (info != null && IsNewerVersion(info.version, CurrentVersion))
-                {
-                    return info;
-                }
+                var json = await client.GetStringAsync(GithubApiUrl);
+                return JsonSerializer.Deserialize<GithubRelease>(json);
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Failed to check for updates: {ex.Message}");
+                Debug.WriteLine($"Failed to fetch github release: {ex.Message}");
+                return null;
+            }
+        }
+
+        public static async Task<GithubRelease?> CheckForUpdatesAsync()
+        {
+            var release = await GetLatestReleaseAsync();
+            if (release != null)
+            {
+                // GitHub tags usually have 'v' prefix, e.g. "v1.0.1"
+                string version = release.tag_name.TrimStart('v', 'V');
+                if (IsNewerVersion(version, CurrentVersion))
+                {
+                    return release;
+                }
             }
             return null;
         }
 
-        public static async Task<bool> DownloadAndInstallUpdateAsync(VersionInfo versionInfo)
+        public static async Task<bool> DownloadAndInstallUpdateAsync(GithubRelease release)
         {
             try
             {
-                // Для Google Drive скачиваем по ID файла:
-                string downloadUrl = $"https://drive.google.com/uc?export=download&id={versionInfo.downloadId}";
+                // Ищем exe файл среди ассетов
+                var exeAsset = Array.Find(release.assets, a => a.name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase));
+                if (exeAsset == null)
+                {
+                    throw new Exception("Exe file not found in the release assets.");
+                }
+
+                string downloadUrl = exeAsset.browser_download_url;
                 
                 string tempExePath = Path.Combine(Path.GetTempPath(), "BlueOpenServer_Update.exe");
                 
