@@ -7,6 +7,9 @@ using System.Text.Json;
 using System.Windows;
 using System.Windows.Media;
 using Microsoft.Win32;
+using Forms = System.Windows.Forms;
+using Color = System.Windows.Media.Color;
+using MessageBox = System.Windows.MessageBox;
 
 namespace BlueOpenServer
 {
@@ -16,6 +19,12 @@ namespace BlueOpenServer
         private AppConfig _config = new();
         private const string ConfigFileName = "config.json";
         private readonly string _configFilePath;
+
+        private Forms.NotifyIcon? _notifyIcon;
+        private Forms.ToolStripMenuItem? _menuItemServerActive;
+        private Forms.ToolStripMenuItem? _menuItemAutostart;
+        private bool _isExiting = false;
+        private bool _shownTrayTip = false;
 
         // DLL Import for locking workstation natively
         [DllImport("user32.dll")]
@@ -31,6 +40,10 @@ namespace BlueOpenServer
             _bluetoothServer.LogMessage += OnServerLog;
             _bluetoothServer.UnlockRequested += OnRemoteUnlockRequested;
             _bluetoothServer.LockRequested += OnRemoteLockRequested;
+
+            StateChanged += MainWindow_StateChanged;
+
+            InitializeTrayIcon();
         }
 
         private async void Window_Loaded(object sender, RoutedEventArgs e)
@@ -117,6 +130,7 @@ namespace BlueOpenServer
                 BtnStart.IsEnabled = true;
                 BtnStop.IsEnabled = false;
             }
+            UpdateTrayMenuState();
         }
 
         private async void BtnStart_Click(object sender, RoutedEventArgs e)
@@ -292,6 +306,7 @@ namespace BlueOpenServer
             {
                 Log($"Registry write error: {ex.Message}");
             }
+            UpdateTrayMenuState();
         }
 
         private void ChkAutoLockOnBoot_Checked(object sender, RoutedEventArgs e)
@@ -311,7 +326,168 @@ namespace BlueOpenServer
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            _bluetoothServer.Stop();
+            if (!_isExiting)
+            {
+                e.Cancel = true;
+                Hide();
+                ShowTrayBalloonTip();
+            }
+            else
+            {
+                _bluetoothServer.Stop();
+                if (_notifyIcon != null)
+                {
+                    _notifyIcon.Visible = false;
+                    _notifyIcon.Dispose();
+                }
+            }
+        }
+
+        private void InitializeTrayIcon()
+        {
+            _notifyIcon = new Forms.NotifyIcon();
+            _notifyIcon.Text = "BlueOpen Server";
+            
+            System.Drawing.Icon? appIcon = null;
+            try
+            {
+                var streamInfo = System.Windows.Application.GetResourceStream(new Uri("pack://application:,,,/app_icon.ico"));
+                if (streamInfo != null)
+                {
+                    using (var bitmap = new System.Drawing.Bitmap(streamInfo.Stream))
+                    {
+                        var hIcon = bitmap.GetHicon();
+                        appIcon = System.Drawing.Icon.FromHandle(hIcon);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log($"Error loading application icon from resources: {ex.Message}");
+            }
+            _notifyIcon.Icon = appIcon ?? System.Drawing.SystemIcons.Application;
+            _notifyIcon.Visible = true;
+
+            var contextMenu = new Forms.ContextMenuStrip();
+
+            var menuItemRestore = new Forms.ToolStripMenuItem("Открыть BlueOpen", null, (s, e) => RestoreWindow());
+            menuItemRestore.Font = new System.Drawing.Font(menuItemRestore.Font, System.Drawing.FontStyle.Bold);
+
+            _menuItemServerActive = new Forms.ToolStripMenuItem("Bluetooth сервер активен", null, async (s, e) => await ToggleServerFromTray());
+            _menuItemServerActive.CheckOnClick = false;
+
+            _menuItemAutostart = new Forms.ToolStripMenuItem("Автозапуск с Windows", null, (s, e) => ToggleAutostartFromTray());
+            _menuItemAutostart.CheckOnClick = false;
+
+            var menuItemExit = new Forms.ToolStripMenuItem("Выход", null, (s, e) => ExitApplication());
+
+            contextMenu.Items.Add(menuItemRestore);
+            contextMenu.Items.Add(new Forms.ToolStripSeparator());
+            contextMenu.Items.Add(_menuItemServerActive);
+            contextMenu.Items.Add(_menuItemAutostart);
+            contextMenu.Items.Add(new Forms.ToolStripSeparator());
+            contextMenu.Items.Add(menuItemExit);
+
+            _notifyIcon.ContextMenuStrip = contextMenu;
+            _notifyIcon.DoubleClick += (s, e) => RestoreWindow();
+            
+            UpdateTrayMenuState();
+        }
+
+        private void RestoreWindow()
+        {
+            Show();
+            WindowState = WindowState.Normal;
+            Activate();
+        }
+
+        private async Task ToggleServerFromTray()
+        {
+            if (_bluetoothServer.IsRunning)
+            {
+                _bluetoothServer.Stop();
+                UpdateStatusUI(false);
+            }
+            else
+            {
+                try
+                {
+                    _bluetoothServer.SetPassword(_config.Password);
+                    await _bluetoothServer.StartAsync();
+                    UpdateStatusUI(true);
+                }
+                catch (Exception ex)
+                {
+                    System.Windows.MessageBox.Show($"Could not start Bluetooth server: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    UpdateStatusUI(false);
+                }
+            }
+        }
+
+        private void ToggleAutostartFromTray()
+        {
+            ChkAutostart.IsChecked = ChkAutostart.IsChecked != true;
+        }
+
+        private void ExitApplication()
+        {
+            _isExiting = true;
+            System.Windows.Application.Current.Shutdown();
+        }
+
+        private void TitleBar_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (e.ClickCount == 2)
+            {
+                if (WindowState == WindowState.Normal)
+                    WindowState = WindowState.Maximized;
+                else
+                    WindowState = WindowState.Normal;
+            }
+            else
+            {
+                DragMove();
+            }
+        }
+
+        private void BtnMinimize_Click(object sender, RoutedEventArgs e)
+        {
+            WindowState = WindowState.Minimized;
+        }
+
+        private void BtnClose_Click(object sender, RoutedEventArgs e)
+        {
+            Close();
+        }
+
+        private void MainWindow_StateChanged(object? sender, EventArgs e)
+        {
+            if (WindowState == WindowState.Minimized)
+            {
+                Hide();
+                ShowTrayBalloonTip();
+            }
+        }
+
+        private void ShowTrayBalloonTip()
+        {
+            if (!_shownTrayTip && _notifyIcon != null)
+            {
+                _notifyIcon.ShowBalloonTip(3000, "BlueOpen Server", "Приложение свернуто в системный трей и продолжает работать.", Forms.ToolTipIcon.Info);
+                _shownTrayTip = true;
+            }
+        }
+
+        private void UpdateTrayMenuState()
+        {
+            if (_menuItemServerActive != null)
+            {
+                _menuItemServerActive.Checked = _bluetoothServer.IsRunning;
+            }
+            if (_menuItemAutostart != null)
+            {
+                _menuItemAutostart.Checked = _config.Autostart;
+            }
         }
     }
 

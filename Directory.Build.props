@@ -1,0 +1,8 @@
+<Project>
+  <PropertyGroup>
+    <!-- Переносим папку сборки за пределы Google Диска для всего решения, 
+         чтобы избежать блокировок файлов (System.IO.IOException) и MSB3539 -->
+    <BaseOutputPath>C:\Temp\BlueOpenBuild\bin\</BaseOutputPath>
+    <BaseIntermediateOutputPath>C:\Temp\BlueOpenBuild\obj\</BaseIntermediateOutputPath>
+  </PropertyGroup>
+</Project>

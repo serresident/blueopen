@@ -10,11 +10,14 @@
 #pragma comment(lib, "credui.lib")
 
 // Bulletproof definitions if the SDK compiler doesn't load them
-#ifndef CPGSR_RETURN_CREDENTIALS
-#define CPGSR_RETURN_CREDENTIALS ((CREDENTIAL_PROVIDER_GET_SERIALIZATION_RESPONSE)1)
+#ifndef CPGSR_NO_CREDENTIAL_NOT_FINISHED
+#define CPGSR_NO_CREDENTIAL_NOT_FINISHED ((CREDENTIAL_PROVIDER_GET_SERIALIZATION_RESPONSE)0)
 #endif
-#ifndef CPGSR_NO_CREDENTIALS
-#define CPGSR_NO_CREDENTIALS ((CREDENTIAL_PROVIDER_GET_SERIALIZATION_RESPONSE)0)
+#ifndef CPGSR_NO_CREDENTIAL_FINISHED
+#define CPGSR_NO_CREDENTIAL_FINISHED ((CREDENTIAL_PROVIDER_GET_SERIALIZATION_RESPONSE)1)
+#endif
+#ifndef CPGSR_RETURN_CREDENTIAL_FINISHED
+#define CPGSR_RETURN_CREDENTIAL_FINISHED ((CREDENTIAL_PROVIDER_GET_SERIALIZATION_RESPONSE)2)
 #endif
 #ifndef STATUS_SUCCESS
 #define STATUS_SUCCESS ((NTSTATUS)0x00000000L)
@@ -309,19 +312,19 @@ HRESULT CBlueOpenCredential::GetSerialization(
         WriteLog("[BlueOpen] SerializeCredentials returned HRESULT = 0x%08X\n", hr);
         if (SUCCEEDED(hr))
         {
-            *pcpgsr = CPGSR_RETURN_CREDENTIALS;
+            *pcpgsr = CPGSR_RETURN_CREDENTIAL_FINISHED;
             // Keep _hasCredentials as TRUE so SetSelected can detect it and set pbAutoSubmit = TRUE.
             // It will be reset to FALSE in ReportResult or SetDeselected.
             return S_OK;
         }
         else
         {
-            *pcpgsr = CPGSR_NO_CREDENTIALS;
+            *pcpgsr = CPGSR_NO_CREDENTIAL_FINISHED;
             return hr;
         }
     }
 
-    *pcpgsr = CPGSR_NO_CREDENTIALS;
+    *pcpgsr = CPGSR_NO_CREDENTIAL_NOT_FINISHED;
     return E_FAIL;
 }
 

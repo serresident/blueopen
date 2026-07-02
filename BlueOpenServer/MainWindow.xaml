@@ -3,13 +3,46 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="BlueOpen - Bluetooth PC Unlocker" 
         Height="680" Width="760"
-        Background="#0f0f12"
+        Background="Transparent"
         Foreground="White"
         WindowStartupLocation="CenterScreen"
+        WindowStyle="None"
+        AllowsTransparency="True"
         Closing="Window_Closing"
         Loaded="Window_Loaded">
 
     <Window.Resources>
+        <!-- Custom TitleBar Button Styles -->
+        <Style x:Key="TitleBarButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#a0a0ab"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#2d2d3a"/>
+                    <Setter Property="Foreground" Value="White"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="TitleBarButtonClose" TargetType="Button" BasedOn="{StaticResource TitleBarButton}">
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#e81123"/>
+                    <Setter Property="Foreground" Value="White"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
         <!-- Modern Card Style -->
         <Style x:Key="ModernCard" TargetType="Border">
             <Setter Property="Background" Value="#16161e"/>
@@ -109,13 +142,41 @@
         </Style>
     </Window.Resources>
 
-    <Grid Margin="25">
+    <Border Background="#0f0f12" CornerRadius="10" BorderBrush="#22222d" BorderThickness="1" Margin="10">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="10" ShadowDepth="0" Color="Black" Opacity="0.5"/>
+        </Border.Effect>
+    <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="40"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
+        
+        <!-- Custom Title Bar -->
+        <Grid Grid.Row="0" Background="Transparent" MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            
+            <Image Grid.Column="0" Width="18" Height="18" Margin="15,0,10,0" VerticalAlignment="Center"/>
+            <TextBlock Grid.Column="1" Text="BlueOpen Server" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#a0a0ab" FontSize="13"/>
+            
+            <StackPanel Grid.Column="2" Orientation="Horizontal">
+                <Button Content="вЂ”" Width="45" Click="BtnMinimize_Click" Style="{StaticResource TitleBarButton}"/>
+                <Button Content="вњ•" Width="45" Click="BtnClose_Click" Style="{StaticResource TitleBarButtonClose}"/>
+            </StackPanel>
+        </Grid>
 
-        <!-- Header -->
+        <!-- Main Content -->
+        <Grid Grid.Row="1" Margin="25,5,25,25">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
         <Grid Grid.Row="0" Margin="0,0,0,25">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
@@ -129,7 +190,7 @@
 
             <Button Grid.Column="1" 
                     Name="BtnLock" 
-                    Content="🔒 Lock PC Now" 
+                    Content="рџ”’ Lock PC Now" 
                     Style="{StaticResource ModernButton}" 
                     Background="#d32f2f" 
                     Click="BtnLock_Click"/>
@@ -230,5 +291,8 @@
                 </Grid>
             </Border>
         </Grid>
+        </Grid>
     </Grid>
+    </Border>
 </Window>
+

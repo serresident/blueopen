@@ -48,3 +48,18 @@ $Recycle.Bin/
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+
+# Android and Gradle
+.gradle/
+local.properties
+/.idea/
+build/
+app/build/
+*.apk
+*.aab
+.cxx/
+
+# .NET Core and WPF
+bin/
+obj/
+*.userprefs

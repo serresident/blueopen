@@ -6,7 +6,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build server",
-            "program": "${workspaceFolder}/BlueOpenServer/bin/Debug/net8.0-windows10.0.19041.0/BlueOpenServer.dll",
+            "program": "C:/Temp/BlueOpenBuild/bin/Debug/net8.0-windows10.0.19041.0/BlueOpenServer.dll",
             "args": [],
             "cwd": "${workspaceFolder}/BlueOpenServer",
             "console": "internalConsole",
