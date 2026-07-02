@@ -227,6 +227,35 @@
                     </StackPanel>
                 </Border>
 
+                <!-- Update Card -->
+                <Border Style="{StaticResource ModernCard}">
+                    <StackPanel>
+                        <TextBlock Text="APP VERSION" FontSize="11" FontWeight="Bold" Foreground="#8e8e93" Margin="0,0,0,8"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Name="TxtVersion" Text="v1.0.0" FontSize="12" Foreground="White" VerticalAlignment="Center"/>
+                            <Button Grid.Column="1" Name="BtnCheckUpdates" Content="Check Updates" Style="{StaticResource SecondaryButton}" Click="BtnCheckUpdates_Click"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Android Client Card -->
+                <Border Style="{StaticResource ModernCard}">
+                    <StackPanel>
+                        <TextBlock Text="ANDROID CLIENT" FontSize="11" FontWeight="Bold" Foreground="#8e8e93" Margin="0,0,0,8"/>
+                        <TextBlock Text="Scan the QR code to download the latest BlueOpen Android App." FontSize="12" Foreground="#8e8e93" Margin="0,0,0,10" TextWrapping="Wrap"/>
+                        <Button Name="BtnGetClient" Content="Get Android Client" Style="{StaticResource PrimaryButton}" Click="BtnGetClient_Click"/>
+                        
+                        <!-- QR Code Container -->
+                        <Border Name="QrCodeContainer" Visibility="Collapsed" Margin="0,15,0,0" Background="White" CornerRadius="8" Padding="10">
+                            <Image Name="ImgQrCode" Width="150" Height="150" RenderOptions.BitmapScalingMode="NearestNeighbor"/>
+                        </Border>
+                    </StackPanel>
+                </Border>
+
                 <!-- Password Settings Card -->
                 <Border Style="{StaticResource ModernCard}">
                     <StackPanel>

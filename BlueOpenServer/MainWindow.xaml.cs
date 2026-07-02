@@ -6,7 +6,11 @@ using System.Text;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using Microsoft.Win32;
+using QRCoder;
+using System.Drawing;
+using System.Drawing.Imaging;
 using Forms = System.Windows.Forms;
 using Color = System.Windows.Media.Color;
 using MessageBox = System.Windows.MessageBox;
@@ -34,7 +38,20 @@ namespace BlueOpenServer
         {
             InitializeComponent();
             
-            _configFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, ConfigFileName);
+            string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            string appFolder = Path.Combine(appData, "BlueOpen");
+            if (!Directory.Exists(appFolder))
+            {
+                Directory.CreateDirectory(appFolder);
+            }
+            _configFilePath = Path.Combine(appFolder, ConfigFileName);
+
+            // Migrate old config if it exists
+            string oldConfigPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, ConfigFileName);
+            if (File.Exists(oldConfigPath) && !File.Exists(_configFilePath))
+            {
+                try { File.Copy(oldConfigPath, _configFilePath); } catch { }
+            }
 
             _bluetoothServer = new BluetoothServer();
             _bluetoothServer.LogMessage += OnServerLog;
@@ -58,6 +75,9 @@ namespace BlueOpenServer
             TxtWinUsername.Text = _config.WinUsername;
             TxtWinDomain.Text = _config.WinDomain;
             TxtWinPassword.Password = _config.WinPassword;
+
+            // Setup Version UI
+            TxtVersion.Text = $"v{UpdateManager.CurrentVersion}";
 
             _bluetoothServer.SetPassword(_config.Password);
 
@@ -183,6 +203,108 @@ namespace BlueOpenServer
         private void BtnLock_Click(object sender, RoutedEventArgs e)
         {
             LockWorkstation();
+        }
+
+        private async void BtnCheckUpdates_Click(object sender, RoutedEventArgs e)
+        {
+            BtnCheckUpdates.IsEnabled = false;
+            BtnCheckUpdates.Content = "Checking...";
+            
+            try
+            {
+                var updateInfo = await UpdateManager.CheckForUpdatesAsync();
+                
+                if (updateInfo != null)
+                {
+                    var result = MessageBox.Show($"New version {updateInfo.version} is available!\n\nDo you want to update now?", "Update Available", MessageBoxButton.YesNo, MessageBoxImage.Information);
+                    if (result == MessageBoxResult.Yes)
+                    {
+                        BtnCheckUpdates.Content = "Downloading...";
+                        bool success = await UpdateManager.DownloadAndInstallUpdateAsync(updateInfo);
+                        if (!success)
+                        {
+                            BtnCheckUpdates.Content = "Update Failed";
+                        }
+                    }
+                    else
+                    {
+                        BtnCheckUpdates.Content = "Check Updates";
+                    }
+                }
+                else
+                {
+                    MessageBox.Show("You are using the latest version.", "Up to date", MessageBoxButton.OK, MessageBoxImage.Information);
+                    BtnCheckUpdates.Content = "Check Updates";
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Update check failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                BtnCheckUpdates.Content = "Check Updates";
+            }
+            finally
+            {
+                BtnCheckUpdates.IsEnabled = true;
+            }
+        }
+
+        private async void BtnGetClient_Click(object sender, RoutedEventArgs e)
+        {
+            BtnGetClient.IsEnabled = false;
+            BtnGetClient.Content = "Loading link...";
+
+            try
+            {
+                var updateInfo = await UpdateManager.CheckForUpdatesAsync();
+                
+                // If checking fails but we still want to show something, we could cache the URL, 
+                // but checking the remote json guarantees the latest APK.
+                if (updateInfo != null && !string.IsNullOrEmpty(updateInfo.clientApkId))
+                {
+                    string downloadUrl = $"https://drive.google.com/uc?export=download&id={updateInfo.clientApkId}";
+                    
+                    // Generate QR Code
+                    using (QRCodeGenerator qrGenerator = new QRCodeGenerator())
+                    using (QRCodeData qrCodeData = qrGenerator.CreateQrCode(downloadUrl, QRCodeGenerator.ECCLevel.Q))
+                    using (QRCode qrCode = new QRCode(qrCodeData))
+                    using (Bitmap qrBitmap = qrCode.GetGraphic(20))
+                    {
+                        ImgQrCode.Source = BitmapToImageSource(qrBitmap);
+                        QrCodeContainer.Visibility = Visibility.Visible;
+                    }
+                    
+                    BtnGetClient.Content = "Scan QR Code Below";
+                }
+                else
+                {
+                    MessageBox.Show("Could not find Android Client link in the remote configuration.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    BtnGetClient.Content = "Get Android Client";
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to generate QR Code: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                BtnGetClient.Content = "Get Android Client";
+            }
+            finally
+            {
+                BtnGetClient.IsEnabled = true;
+            }
+        }
+
+        private BitmapImage BitmapToImageSource(Bitmap bitmap)
+        {
+            using (MemoryStream memory = new MemoryStream())
+            {
+                bitmap.Save(memory, ImageFormat.Png);
+                memory.Position = 0;
+                BitmapImage bitmapImage = new BitmapImage();
+                bitmapImage.BeginInit();
+                bitmapImage.StreamSource = memory;
+                bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
+                bitmapImage.EndInit();
+                return bitmapImage;
+            }
         }
 
         private void LockWorkstation()

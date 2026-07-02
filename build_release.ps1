@@ -1,0 +1,37 @@
+$ErrorActionPreference = "Stop"
+$ServerProject = ".\BlueOpenServer\BlueOpenServer.csproj"
+$SetupProject = ".\BlueOpenSetup\BlueOpenSetup.csproj"
+$PublishDir = ".\ReleaseBuild"
+
+Write-Host "1. Building BlueOpenServer..." -ForegroundColor Cyan
+
+# Publish Server as single file
+dotnet publish $ServerProject -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o ".\BlueOpenSetup\Payload"
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Server build failed." -ForegroundColor Red
+    exit 1
+}
+
+Write-Host "2. Building BlueOpenSetup Installer..." -ForegroundColor Cyan
+
+# Publish Setup as single file
+dotnet publish $SetupProject -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o $PublishDir
+
+if ($LASTEXITCODE -eq 0) {
+    Write-Host "`nSuccessfully built Installer!" -ForegroundColor Green
+    Write-Host "Your installer is at: $(Resolve-Path $PublishDir)\BlueOpenSetup.exe" -ForegroundColor Yellow
+} else {
+    Write-Host "`nInstaller build failed." -ForegroundColor Red
+}
+
+Write-Host "3. Copying Android APK to Updates folder..." -ForegroundColor Cyan
+$ApkSource = ".\BlueOpenClient\app\build\outputs\apk\release\app-release.apk"
+$ApkTarget = ".\Updates\BlueOpenClient.apk"
+
+if (Test-Path $ApkSource) {
+    Copy-Item -Path $ApkSource -Destination $ApkTarget -Force
+    Write-Host "Successfully copied Android APK to Updates folder!" -ForegroundColor Green
+} else {
+    Write-Host "Release APK not found at $ApkSource. Skipping APK copy." -ForegroundColor Yellow
+}
