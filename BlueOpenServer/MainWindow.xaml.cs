@@ -354,11 +354,7 @@ namespace BlueOpenServer
                 var streamInfo = System.Windows.Application.GetResourceStream(new Uri("pack://application:,,,/app_icon.ico"));
                 if (streamInfo != null)
                 {
-                    using (var bitmap = new System.Drawing.Bitmap(streamInfo.Stream))
-                    {
-                        var hIcon = bitmap.GetHicon();
-                        appIcon = System.Drawing.Icon.FromHandle(hIcon);
-                    }
+                    appIcon = new System.Drawing.Icon(streamInfo.Stream);
                 }
             }
             catch (Exception ex)
