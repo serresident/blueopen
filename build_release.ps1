@@ -6,7 +6,7 @@ $PublishDir = ".\ReleaseBuild"
 Write-Host "1. Building BlueOpenServer..." -ForegroundColor Cyan
 
 # Publish Server as single file
-dotnet publish $ServerProject -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o ".\BlueOpenSetup\Payload"
+dotnet publish $ServerProject -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o ".\BlueOpenSetup\Payload"
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Server build failed." -ForegroundColor Red
@@ -16,7 +16,7 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "2. Building BlueOpenSetup Installer..." -ForegroundColor Cyan
 
 # Publish Setup as single file
-dotnet publish $SetupProject -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o $PublishDir
+dotnet publish $SetupProject -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o $PublishDir
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "`nSuccessfully built Installer!" -ForegroundColor Green

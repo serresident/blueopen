@@ -257,30 +257,21 @@ namespace BlueOpenServer
             {
                 var release = await UpdateManager.GetLatestReleaseAsync();
                 
-                if (release != null && release.assets != null)
+                if (release != null && !string.IsNullOrEmpty(release.apk_download_url))
                 {
-                    var apkAsset = Array.Find(release.assets, a => a.name.EndsWith(".apk", StringComparison.OrdinalIgnoreCase));
-                    if (apkAsset != null)
+                    string finalDownloadUrl = release.apk_download_url;
+                    
+                    // Generate QR Code
+                    using (QRCodeGenerator qrGenerator = new QRCodeGenerator())
+                    using (QRCodeData qrCodeData = qrGenerator.CreateQrCode(finalDownloadUrl, QRCodeGenerator.ECCLevel.Q))
+                    using (QRCode qrCode = new QRCode(qrCodeData))
+                    using (Bitmap qrBitmap = qrCode.GetGraphic(20))
                     {
-                        string finalDownloadUrl = apkAsset.browser_download_url;
-                        
-                        // Generate QR Code
-                        using (QRCodeGenerator qrGenerator = new QRCodeGenerator())
-                        using (QRCodeData qrCodeData = qrGenerator.CreateQrCode(finalDownloadUrl, QRCodeGenerator.ECCLevel.Q))
-                        using (QRCode qrCode = new QRCode(qrCodeData))
-                        using (Bitmap qrBitmap = qrCode.GetGraphic(20))
-                        {
-                            ImgQrCode.Source = BitmapToImageSource(qrBitmap);
-                            QrCodeContainer.Visibility = Visibility.Visible;
-                        }
-                        
-                        BtnGetClient.Content = "Scan QR Code Below";
+                        ImgQrCode.Source = BitmapToImageSource(qrBitmap);
+                        QrCodeContainer.Visibility = Visibility.Visible;
                     }
-                    else
-                    {
-                        MessageBox.Show("Could not find Android Client link in the release assets.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                        BtnGetClient.Content = "Get Android Client";
-                    }
+                    
+                    BtnGetClient.Content = "Scan QR Code Below";
                 }
                 else
                 {

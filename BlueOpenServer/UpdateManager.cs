@@ -8,21 +8,16 @@ using System.Windows;
 
 namespace BlueOpenServer
 {
-    public class GithubAsset
-    {
-        public string name { get; set; } = "";
-        public string browser_download_url { get; set; } = "";
-    }
-
     public class GithubRelease
     {
         public string tag_name { get; set; } = "";
-        public GithubAsset[] assets { get; set; } = Array.Empty<GithubAsset>();
+        public string apk_download_url { get; set; } = "";
+        public string exe_download_url { get; set; } = "";
     }
 
     public static class UpdateManager
     {
-        private const string GithubApiUrl = "https://api.github.com/repos/serresident/blueopen/releases/latest";
+        private const string GithubLatestUrl = "https://github.com/serresident/blueopen/releases/latest";
         
         public const string CurrentVersion = "1.0.0";
 
@@ -30,12 +25,32 @@ namespace BlueOpenServer
         {
             try
             {
-                using var client = new HttpClient();
-                // GitHub API requires a User-Agent header
+                var handler = new HttpClientHandler { AllowAutoRedirect = false };
+                using var client = new HttpClient(handler);
                 client.DefaultRequestHeaders.Add("User-Agent", "BlueOpenServer");
                 
-                var json = await client.GetStringAsync(GithubApiUrl);
-                return JsonSerializer.Deserialize<GithubRelease>(json);
+                var response = await client.GetAsync(GithubLatestUrl);
+                
+                if (response.StatusCode == System.Net.HttpStatusCode.Found || response.StatusCode == System.Net.HttpStatusCode.Redirect)
+                {
+                    string location = response.Headers.Location?.ToString() ?? "";
+                    if (!string.IsNullOrEmpty(location))
+                    {
+                        int lastSlash = location.LastIndexOf('/');
+                        if (lastSlash >= 0)
+                        {
+                            string tag = location.Substring(lastSlash + 1);
+                            
+                            return new GithubRelease
+                            {
+                                tag_name = tag,
+                                apk_download_url = $"https://github.com/serresident/blueopen/releases/download/{tag}/BlueOpenClient.apk",
+                                exe_download_url = $"https://github.com/serresident/blueopen/releases/download/{tag}/BlueOpenSetup.exe"
+                            };
+                        }
+                    }
+                }
+                return null;
             }
             catch (Exception ex)
             {
@@ -63,14 +78,7 @@ namespace BlueOpenServer
         {
             try
             {
-                // Ищем exe файл среди ассетов
-                var exeAsset = Array.Find(release.assets, a => a.name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase));
-                if (exeAsset == null)
-                {
-                    throw new Exception("Exe file not found in the release assets.");
-                }
-
-                string downloadUrl = exeAsset.browser_download_url;
+                string downloadUrl = release.exe_download_url;
                 
                 string tempExePath = Path.Combine(Path.GetTempPath(), "BlueOpenServer_Update.exe");
                 
