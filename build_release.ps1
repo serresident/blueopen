@@ -53,15 +53,28 @@ if ($LASTEXITCODE -eq 0) {
 }
 
 Write-Host "`n4. Copying Android APK to ReleaseBuild folder for GitHub..." -ForegroundColor Cyan
-$ApkSource = ".\BlueOpenClient\app\build\outputs\apk\release\app-release.apk"
-$ApkTarget = ".\ReleaseBuild\BlueOpenClient.apk"
+$ApkCandidates = @(
+    ".\BlueOpenClient\app\build\outputs\apk\release\app-release.apk",
+    ".\BlueOpenClient\app\build\outputs\apk\release\app-release-unsigned.apk",
+    ".\BlueOpenClient.apk"
+)
 
-if (Test-Path $ApkSource) {
-    Copy-Item -Path $ApkSource -Destination $ApkTarget -Force
-    Write-Host "Successfully copied Android APK to ReleaseBuild folder!" -ForegroundColor Green
-} elseif (Test-Path ".\BlueOpenClient.apk") {
-    Copy-Item -Path ".\BlueOpenClient.apk" -Destination $ApkTarget -Force
-    Write-Host "Successfully copied Android APK from root to ReleaseBuild folder!" -ForegroundColor Green
-} else {
-    Write-Host "Release APK not found at $ApkSource. Skipping APK copy." -ForegroundColor Yellow
+$foundApk = $null
+foreach ($cand in $ApkCandidates) {
+    if (Test-Path $cand) {
+        $foundApk = $cand
+        break
+    }
 }
+
+if ($foundApk) {
+    Copy-Item -Path $foundApk -Destination "$PublishDir\BlueOpenClient.apk" -Force
+    Copy-Item -Path $foundApk -Destination ".\BlueOpenClient.apk" -Force
+    if (Test-Path ".\Updates") {
+        Copy-Item -Path $foundApk -Destination ".\Updates\BlueOpenClient.apk" -Force
+    }
+    Write-Host "Successfully copied Android APK ($foundApk) to $PublishDir and root!" -ForegroundColor Green
+} else {
+    Write-Host "Release APK not found. Skipping APK copy." -ForegroundColor Yellow
+}
+
