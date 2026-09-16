@@ -1,4 +1,5 @@
 #pragma once
+#include <winsock2.h>
 #include <windows.h>
 #include <credentialprovider.h>
 
@@ -7,12 +8,10 @@ enum BLUEOPEN_FIELD_ID
     FID_LOGO = 0,
     FID_TITLE = 1,
     FID_STATUS = 2,
-    FID_USERNAME = 3,
-    FID_PASSWORD = 4,
-    FID_NUM_FIELDS = 5,
+    FID_NUM_FIELDS = 3,
 };
 
-class CBlueOpenProvider : public ICredentialProvider
+class CBlueOpenProvider : public ICredentialProvider, public ICredentialProviderSetUserArray
 {
 public:
     // IUnknown
@@ -30,6 +29,9 @@ public:
     IFACEMETHODIMP Advise(_In_ ICredentialProviderEvents* pEvents, _In_ UINT_PTR upAdviseContext);
     IFACEMETHODIMP UnAdvise();
 
+    // ICredentialProviderSetUserArray
+    IFACEMETHODIMP SetUserArray(_In_ ICredentialProviderUserArray* users);
+
     CBlueOpenProvider();
 
 protected:
@@ -41,6 +43,7 @@ private:
     ICredentialProviderCredential* _pCredential;
     ICredentialProviderEvents* _pEvents;
     UINT_PTR _upAdviseContext;
+    WCHAR _szTargetUserSid[256];
 };
 
 HRESULT CBlueOpenProvider_CreateInstance(_In_ REFIID riid, _Outptr_ void** ppv);

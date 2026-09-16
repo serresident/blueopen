@@ -24,6 +24,9 @@ Source: "BlueOpenServer\bin\Release\net8.0-windows10.0.19041.0\WinRT.Runtime.dll
 ; Copy the Credential Provider DLL to System32
 Source: "BlueOpenProvider\bin\x64\Release\BlueOpenProvider.dll"; DestDir: "{sys}"; Flags: ignoreversion restartreplace
 
+[Dirs]
+Name: "{commonappdata}\BlueOpen"; Permissions: users-modify
+
 [Registry]
 ; Register COM object CLSID for the Credential Provider
 Root: HKLM; Subkey: "Software\Classes\CLSID\{{8a3b8d4f-3c8b-4a5f-9e8a-0c2d3b4a5f6e}"; ValueType: string; ValueName: ""; ValueData: "BlueOpen Credential Provider"; Flags: uninsdeletekey

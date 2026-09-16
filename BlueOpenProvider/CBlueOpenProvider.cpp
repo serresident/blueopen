@@ -10,6 +10,7 @@ CBlueOpenProvider::CBlueOpenProvider() :
     _pEvents(nullptr),
     _upAdviseContext(0)
 {
+    _szTargetUserSid[0] = L'\0';
 }
 
 CBlueOpenProvider::~CBlueOpenProvider()
@@ -38,6 +39,12 @@ HRESULT CBlueOpenProvider::QueryInterface(_In_ REFIID riid, _Outptr_ void** ppv)
         AddRef();
         return S_OK;
     }
+    else if (riid == IID_ICredentialProviderSetUserArray)
+    {
+        *ppv = static_cast<ICredentialProviderSetUserArray*>(this);
+        AddRef();
+        return S_OK;
+    }
     return E_NOINTERFACE;
 }
 
@@ -54,6 +61,42 @@ ULONG CBlueOpenProvider::Release()
         delete this;
     }
     return cRef;
+}
+
+// ICredentialProviderSetUserArray
+HRESULT CBlueOpenProvider::SetUserArray(_In_ ICredentialProviderUserArray* users)
+{
+    if (users == nullptr) return E_POINTER;
+
+    DWORD userCount = 0;
+    HRESULT hr = users->GetCount(&userCount);
+    if (FAILED(hr)) return hr;
+
+    for (DWORD i = 0; i < userCount; ++i)
+    {
+        ICredentialProviderUser* pUser = nullptr;
+        hr = users->GetAt(i, &pUser);
+        if (SUCCEEDED(hr) && pUser != nullptr)
+        {
+            PWSTR pszSid = nullptr;
+            hr = pUser->GetSid(&pszSid);
+            if (SUCCEEDED(hr) && pszSid != nullptr)
+            {
+                wcscpy_s(_szTargetUserSid, pszSid);
+                CoTaskMemFree(pszSid);
+
+                if (_pCredential != nullptr)
+                {
+                    static_cast<CBlueOpenCredential*>(_pCredential)->SetTargetUserSid(_szTargetUserSid);
+                }
+                pUser->Release();
+                break;
+            }
+            pUser->Release();
+        }
+    }
+
+    return S_OK;
 }
 
 // ICredentialProvider
@@ -73,14 +116,24 @@ HRESULT CBlueOpenProvider::SetUsageScenario(_In_ CREDENTIAL_PROVIDER_USAGE_SCENA
 
 HRESULT CBlueOpenProvider::SetSerialization(_In_ const CREDENTIAL_PROVIDER_CREDENTIAL_SERIALIZATION* pcpcs)
 {
-    return E_NOTIMPL;
+    return S_OK;
 }
 
 HRESULT CBlueOpenProvider::GetCredentialCount(_Out_ DWORD* pdwCount, _Out_ DWORD* pdwDefault, _Out_ BOOL* pbAutoLogonWithDefault)
 {
     *pdwCount = 1;
     *pdwDefault = 0;
-    *pbAutoLogonWithDefault = TRUE;
+
+    // Only auto-logon if credentials have already been received via phone / pipe!
+    if (_pCredential != nullptr && static_cast<CBlueOpenCredential*>(_pCredential)->HasCredentials())
+    {
+        *pbAutoLogonWithDefault = TRUE;
+    }
+    else
+    {
+        *pbAutoLogonWithDefault = FALSE;
+    }
+
     return S_OK;
 }
 
@@ -92,6 +145,11 @@ HRESULT CBlueOpenProvider::GetCredentialAt(_In_ DWORD dwIndex, _Outptr_ ICredent
     {
         CBlueOpenCredential* pCred = new (std::nothrow) CBlueOpenCredential();
         if (pCred == nullptr) return E_OUTOFMEMORY;
+
+        if (_szTargetUserSid[0] != L'\0')
+        {
+            pCred->SetTargetUserSid(_szTargetUserSid);
+        }
 
         HRESULT hr = pCred->Initialize(_cpus);
         if (FAILED(hr))
@@ -151,14 +209,10 @@ HRESULT CBlueOpenProvider::UnAdvise()
     return S_OK;
 }
 
-
-
 static const CREDENTIAL_PROVIDER_FIELD_DESCRIPTOR s_rgFieldDescriptors[] = {
     { FID_LOGO, CPFT_TILE_IMAGE, (LPWSTR)L"Logo", GUID_NULL },
     { FID_TITLE, CPFT_LARGE_TEXT, (LPWSTR)L"BlueOpen Bluetooth Unlocker", GUID_NULL },
     { FID_STATUS, CPFT_SMALL_TEXT, (LPWSTR)L"Status", GUID_NULL },
-    { FID_USERNAME, CPFT_EDIT_TEXT, (LPWSTR)L"Username", GUID_NULL },
-    { FID_PASSWORD, CPFT_PASSWORD_TEXT, (LPWSTR)L"Password", GUID_NULL }
 };
 
 HRESULT CBlueOpenProvider::GetFieldDescriptorCount(_Out_ DWORD* pdwCount)

@@ -1,16 +1,42 @@
+$workspaceDir = $PSScriptRoot
+if (-not $workspaceDir -or (-not (Test-Path "$workspaceDir\BlueOpenProvider"))) {
+    if (Test-Path ".\BlueOpenProvider") {
+        $workspaceDir = (Get-Location).Path
+    } elseif (Test-Path "c:\Users\erch\Мой диск\1 for ai\blueopen") {
+        $workspaceDir = "c:\Users\erch\Мой диск\1 for ai\blueopen"
+    }
+}
+
 # Ensure running as Administrator
 if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     Write-Warning "This script must be run as Administrator! Requesting elevation..."
-    Start-Process powershell -Verb RunAs -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
+    $scriptPath = if ($PSCommandPath) { $PSCommandPath } else { "$workspaceDir\install_blueopen.ps1" }
+    Start-Process powershell -Verb RunAs -WorkingDirectory "$workspaceDir" -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`""
     exit
 }
 
-$workspaceDir = $PSScriptRoot
 $targetDir = "C:\Program Files\BlueOpen"
 $srcServerDir = "$workspaceDir\BlueOpenServer\bin\Release\net8.0-windows10.0.19041.0"
 $srcDll = "$workspaceDir\BlueOpenProvider\bin\x64\Release\BlueOpenProvider.dll"
 
 Write-Host "--- BlueOpen Installer ---" -ForegroundColor Cyan
+
+# 0. Build Provider DLL if missing
+if (-not (Test-Path $srcDll)) {
+    Write-Host "BlueOpenProvider.dll not found. Building now..." -ForegroundColor Yellow
+    $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+    $msbuild = $null
+    if (Test-Path $vswhere) {
+        $msbuild = & $vswhere -latest -products * -requires Microsoft.Component.MSBuild -find MSBuild\**\Bin\MSBuild.exe | Select-Object -First 1
+    }
+    if (-not $msbuild -or -not (Test-Path $msbuild)) {
+        $msbuild = "C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe"
+    }
+
+    if (Test-Path $msbuild) {
+        & $msbuild "$workspaceDir\BlueOpenProvider\BlueOpenProvider.vcxproj" /p:Configuration=Release /p:Platform=x64 /t:Build
+    }
+}
 
 # 1. Create Target Directory
 if (-not (Test-Path $targetDir)) {
@@ -18,7 +44,27 @@ if (-not (Test-Path $targetDir)) {
     New-Item -ItemType Directory -Path $targetDir | Out-Null
 }
 
-# 2. Copy WPF Server Application files
+# Create ProgramData directory for shared config and grant modify permissions to Users (SID: S-1-5-32-545)
+$programDataDir = "C:\ProgramData\BlueOpen"
+if (-not (Test-Path $programDataDir)) {
+    Write-Host "Creating shared ProgramData folder: $programDataDir"
+    New-Item -ItemType Directory -Path $programDataDir | Out-Null
+}
+icacls $programDataDir /grant "*S-1-5-32-545:(OI)(CI)M" /q | Out-Null
+
+# Copy user config if exists in AppData
+$userConfig = "$env:APPDATA\BlueOpen\config.json"
+$targetConfig = "$programDataDir\config.json"
+if ((Test-Path $userConfig) -and (-not (Test-Path $targetConfig))) {
+    Copy-Item -Path $userConfig -Destination $targetConfig -Force
+    icacls $targetConfig /grant "*S-1-5-32-545:M" /q | Out-Null
+    Write-Host "Migrated user config to $targetConfig" -ForegroundColor Green
+}
+
+# 2. Close running server before copying files
+Get-Process BlueOpenServer -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+
+# 3. Copy WPF Server Application files (if compiled)
 Write-Host "Copying BlueOpen Server files..." -ForegroundColor Green
 $filesToCopy = @(
     "BlueOpenServer.exe",
@@ -34,12 +80,10 @@ foreach ($file in $filesToCopy) {
     if (Test-Path $srcFile) {
         Copy-Item -Path $srcFile -Destination $targetDir -Force
         Write-Host "  Copied $file"
-    } else {
-        Write-Error "Source file not found: $srcFile"
     }
 }
 
-# 3. Copy Credential Provider DLL to System32
+# 4. Copy Credential Provider DLL to System32
 $sys32Dir = "C:\Windows\System32"
 $destDll = Join-Path $sys32Dir "BlueOpenProvider.dll"
 $destDllOld = Join-Path $sys32Dir "BlueOpenProvider.dll.old"
@@ -60,7 +104,7 @@ try {
     Write-Error "Failed to install DLL: $_"
 }
 
-# 4. Register Credential Provider in Registry
+# 5. Register Credential Provider in Registry
 Write-Host "Registering Credential Provider in Registry..." -ForegroundColor Green
 $guid = "{8a3b8d4f-3c8b-4a5f-9e8a-0c2d3b4a5f6e}"
 
@@ -79,12 +123,15 @@ $cpPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\Creden
 if (-not (Test-Path $cpPath)) { New-Item -Path $cpPath -Force | Out-Null }
 Set-ItemProperty -Path $cpPath -Name "(Default)" -Value "BlueOpen Credential Provider"
 
-# 5. Register Startup for auto-run
+# 6. Register Startup for auto-run
 Write-Host "Registering BlueOpen Server in startup..." -ForegroundColor Green
 $runPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run"
-Set-ItemProperty -Path $runPath -Name "BlueOpenServer" -Value "`"$targetDir\BlueOpenServer.exe`""
+$exePath = Join-Path $targetDir "BlueOpenServer.exe"
+if (Test-Path $exePath) {
+    Set-ItemProperty -Path $runPath -Name "BlueOpenServer" -Value "`"$exePath`""
+}
 
-# 6. Create Start Menu Shortcut
+# 7. Create Start Menu Shortcut
 Write-Host "Creating Start Menu shortcut..." -ForegroundColor Green
 $shortcutPath = "C:\ProgramData\Microsoft\Windows\Start Menu\Programs\BlueOpen Server.lnk"
 try {
@@ -99,5 +146,10 @@ try {
     Write-Warning "Failed to create Start Menu shortcut: $_"
 }
 
+# Restart BlueOpenServer if exe exists
+if (Test-Path $exePath) {
+    Write-Host "Starting BlueOpen Server..." -ForegroundColor Green
+    Start-Process -FilePath $exePath
+}
+
 Write-Host "`nInstallation Completed Successfully!" -ForegroundColor Cyan
-Read-Host "Press Enter to exit"

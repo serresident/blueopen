@@ -1,8 +1,16 @@
 #pragma once
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <winsock2.h>
+#include <ws2bth.h>
 #include <windows.h>
 #include <credentialprovider.h>
+#include <string>
 
-class CBlueOpenCredential : public ICredentialProviderCredential
+extern HINSTANCE g_hInst;
+
+class CBlueOpenCredential : public ICredentialProviderCredential2
 {
 public:
     // IUnknown
@@ -24,7 +32,6 @@ public:
     IFACEMETHODIMP Advise(_In_ ICredentialProviderCredentialEvents* pEvents);
     IFACEMETHODIMP UnAdvise();
 
-    // Missing ICredentialProviderCredential methods
     IFACEMETHODIMP SetSelected(_Out_ BOOL* pbAutoSubmit);
     IFACEMETHODIMP SetDeselected();
     IFACEMETHODIMP GetSubmitButtonValue(_In_ DWORD dwFieldID, _Out_ DWORD* pdwAdjacentTo);
@@ -33,10 +40,15 @@ public:
     IFACEMETHODIMP SetCheckboxValue(_In_ DWORD dwFieldID, _In_ BOOL bChecked);
     IFACEMETHODIMP SetComboBoxSelectedValue(_In_ DWORD dwFieldID, _In_ DWORD dwIndex);
 
+    // ICredentialProviderCredential2
+    IFACEMETHODIMP GetUserSid(_Outptr_ wchar_t** sid);
+
     // Custom methods
     CBlueOpenCredential();
     HRESULT Initialize(_In_ CREDENTIAL_PROVIDER_USAGE_SCENARIO cpus);
     void SetProviderEvents(ICredentialProviderEvents* pEvents, UINT_PTR upAdviseContext);
+    void SetTargetUserSid(_In_ PCWSTR pszSid);
+    BOOL HasCredentials() const { return _hasCredentials; }
 
 protected:
     virtual ~CBlueOpenCredential();
@@ -45,6 +57,13 @@ private:
     // Named Pipe listener methods
     static DWORD WINAPI PipeListenerThread(LPVOID lpParam);
     void ListenToPipe();
+
+    // Direct Bluetooth listener methods (for pre-logon / logoff state)
+    static DWORD WINAPI BtListenerThread(LPVOID lpParam);
+    void ListenToBluetooth();
+    bool IsServerProcessRunning();
+    bool LoadConfig(std::wstring& outUser, std::wstring& outDomain, std::wstring& outPassword, std::string& outAuthSecret);
+    void TriggerLogon();
 
     // Credential Serialization helper
     HRESULT SerializeCredentials(
@@ -57,6 +76,7 @@ private:
     LONG _cRef;
     CREDENTIAL_PROVIDER_USAGE_SCENARIO _cpus;
     ICredentialProviderCredentialEvents* _pEvents;
+    DWORD _dwCredentialEventsCookie;
     
     // Logon events from the main provider
     ICredentialProviderEvents* _pProviderEvents;
@@ -67,10 +87,16 @@ private:
     WCHAR _szStatusText[256];
     WCHAR _szUsername[256];
     WCHAR _szPassword[256];
+    WCHAR _szTargetUserSid[256];
     BOOL _hasCredentials;
 
     // Named Pipe thread handle
     HANDLE _hPipeThread;
     HANDLE _hPipe;
     BOOL _bListening;
+
+    // Direct Bluetooth thread handle
+    HANDLE _hBtThread;
+    SOCKET _btListenSocket;
+    BOOL _bBtListening;
 };

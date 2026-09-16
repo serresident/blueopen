@@ -38,19 +38,29 @@ namespace BlueOpenServer
         {
             InitializeComponent();
             
-            string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            string appFolder = Path.Combine(appData, "BlueOpen");
+            string commonData = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
+            string appFolder = Path.Combine(commonData, "BlueOpen");
             if (!Directory.Exists(appFolder))
             {
-                Directory.CreateDirectory(appFolder);
+                try { Directory.CreateDirectory(appFolder); } catch { }
             }
             _configFilePath = Path.Combine(appFolder, ConfigFileName);
 
-            // Migrate old config if it exists
-            string oldConfigPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, ConfigFileName);
-            if (File.Exists(oldConfigPath) && !File.Exists(_configFilePath))
+            // Migrate old configs if they exist
+            string userAppData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            string oldUserConfig = Path.Combine(userAppData, "BlueOpen", ConfigFileName);
+            string oldBaseConfig = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, ConfigFileName);
+
+            if (!File.Exists(_configFilePath))
             {
-                try { File.Copy(oldConfigPath, _configFilePath); } catch { }
+                if (File.Exists(oldUserConfig))
+                {
+                    try { File.Copy(oldUserConfig, _configFilePath); } catch { }
+                }
+                else if (File.Exists(oldBaseConfig))
+                {
+                    try { File.Copy(oldBaseConfig, _configFilePath); } catch { }
+                }
             }
 
             _bluetoothServer = new BluetoothServer();
@@ -123,14 +133,37 @@ namespace BlueOpenServer
 
         private void SaveConfig()
         {
+            string json = JsonSerializer.Serialize(_config, new JsonSerializerOptions { WriteIndented = true });
+
+            // 1. Save to ProgramData (shared with Credential Provider)
             try
             {
-                string json = JsonSerializer.Serialize(_config, new JsonSerializerOptions { WriteIndented = true });
+                string? dir = Path.GetDirectoryName(_configFilePath);
+                if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+                {
+                    Directory.CreateDirectory(dir);
+                }
                 File.WriteAllText(_configFilePath, json);
             }
             catch (Exception ex)
             {
-                Log($"Error saving configuration: {ex.Message}");
+                Log($"Notice: Could not write shared config to ProgramData: {ex.Message}");
+            }
+
+            // 2. Save to User AppData as reliable backup
+            try
+            {
+                string userAppData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+                string userConfigDir = Path.Combine(userAppData, "BlueOpen");
+                if (!Directory.Exists(userConfigDir))
+                {
+                    Directory.CreateDirectory(userConfigDir);
+                }
+                File.WriteAllText(Path.Combine(userConfigDir, ConfigFileName), json);
+            }
+            catch (Exception ex)
+            {
+                Log($"Error saving user config: {ex.Message}");
             }
         }
 
