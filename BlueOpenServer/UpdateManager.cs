@@ -19,7 +19,7 @@ namespace BlueOpenServer
     {
         private const string GithubLatestUrl = "https://github.com/serresident/blueopen/releases/latest";
         
-        public const string CurrentVersion = "1.0.0";
+        public const string CurrentVersion = "1.1.0";
 
         public static async Task<GithubRelease?> GetLatestReleaseAsync()
         {

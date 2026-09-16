@@ -59,6 +59,9 @@ $ApkTarget = ".\ReleaseBuild\BlueOpenClient.apk"
 if (Test-Path $ApkSource) {
     Copy-Item -Path $ApkSource -Destination $ApkTarget -Force
     Write-Host "Successfully copied Android APK to ReleaseBuild folder!" -ForegroundColor Green
+} elseif (Test-Path ".\BlueOpenClient.apk") {
+    Copy-Item -Path ".\BlueOpenClient.apk" -Destination $ApkTarget -Force
+    Write-Host "Successfully copied Android APK from root to ReleaseBuild folder!" -ForegroundColor Green
 } else {
     Write-Host "Release APK not found at $ApkSource. Skipping APK copy." -ForegroundColor Yellow
 }

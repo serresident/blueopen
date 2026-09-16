@@ -4,8 +4,8 @@
 IDB_LOGO BITMAP "logo.bmp"
 
 VS_VERSION_INFO VERSIONINFO
-FILEVERSION 1,0,0,1
-PRODUCTVERSION 1,0,0,1
+FILEVERSION 1,1,0,0
+PRODUCTVERSION 1,1,0,0
 FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
 FILEFLAGS 0x1L
@@ -22,12 +22,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "BlueOpen"
             VALUE "FileDescription", "BlueOpen Windows Credential Provider"
-            VALUE "FileVersion", "1.0.0.1"
+            VALUE "FileVersion", "1.1.0.0"
             VALUE "InternalName", "BlueOpenProvider.dll"
             VALUE "LegalCopyright", "Copyright (C) 2026 BlueOpen"
             VALUE "OriginalFilename", "BlueOpenProvider.dll"
             VALUE "ProductName", "BlueOpen"
-            VALUE "ProductVersion", "1.0.0.1"
+            VALUE "ProductVersion", "1.1.0.0"
         END
     END
     BLOCK "VarFileInfo"
