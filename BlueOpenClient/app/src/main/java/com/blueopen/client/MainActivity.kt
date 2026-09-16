@@ -15,11 +15,14 @@ import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Toast
+import android.net.Uri
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import com.blueopen.client.databinding.ActivityMainBinding
 import java.io.BufferedReader
+import java.io.File
 import java.io.InputStreamReader
 import java.io.OutputStream
 import java.security.MessageDigest
@@ -72,6 +75,10 @@ class MainActivity : AppCompatActivity() {
 
         binding.btnUnlock.setOnClickListener {
             sendBluetoothCommand("UNLOCK")
+        }
+
+        binding.btnSendInstallerLink.setOnClickListener {
+            sendInstallerLinkViaBluetooth()
         }
 
         binding.spinnerDevices.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
@@ -283,6 +290,48 @@ class MainActivity : AppCompatActivity() {
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val savedPassword = prefs.getString(KEY_PASSWORD, "")
         binding.etPassword.setText(savedPassword)
+    }
+
+    private fun sendInstallerLinkViaBluetooth() {
+        try {
+            // Create Windows Internet Shortcut file (.url)
+            val fileName = "BlueOpen_Download.url"
+            val file = File(cacheDir, fileName)
+            val content = "[InternetShortcut]\r\nURL=https://github.com/serresident/blueopen/releases/latest\r\n"
+            file.writeText(content, Charsets.UTF_8)
+
+            val uri: Uri = FileProvider.getUriForFile(
+                this,
+                "$packageName.fileprovider",
+                file
+            )
+
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "*/*"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                putExtra(Intent.EXTRA_TEXT, "BlueOpen Windows Installer: https://github.com/serresident/blueopen/releases/latest")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                setPackage("com.android.bluetooth")
+            }
+
+            val resolveInfos = packageManager.queryIntentActivities(intent, 0)
+            if (resolveInfos.isNotEmpty()) {
+                startActivity(intent)
+            } else {
+                val chooserIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "*/*"
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    putExtra(Intent.EXTRA_TEXT, "BlueOpen Windows Installer: https://github.com/serresident/blueopen/releases/latest")
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                startActivity(Intent.createChooser(chooserIntent, "Передать ссылку на ПК через Bluetooth"))
+            }
+
+            Toast.makeText(this, "На ПК: нажмите Win+R -> fsquirt -> Принимать файлы", Toast.LENGTH_LONG).show()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Toast.makeText(this, "Ошибка передачи: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
