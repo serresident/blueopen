@@ -81,6 +81,14 @@ class MainActivity : AppCompatActivity() {
             sendInstallerLinkViaBluetooth()
         }
 
+        binding.btnSendInstallerLink.setOnLongClickListener {
+            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            val clip = android.content.ClipData.newPlainText("BlueOpen URL", "https://github.com/serresident/blueopen/releases/latest")
+            clipboard.setPrimaryClip(clip)
+            Toast.makeText(this, "Ссылка скопирована в буфер обмена!", Toast.LENGTH_SHORT).show()
+            true
+        }
+
         binding.spinnerDevices.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                 if (position in matchedDevices.indices) {
@@ -294,11 +302,37 @@ class MainActivity : AppCompatActivity() {
 
     private fun sendInstallerLinkViaBluetooth() {
         try {
-            // Create Windows Internet Shortcut file (.url)
-            val fileName = "BlueOpen_Download.url"
+            // Create HTML redirect file with clean Windows-compatible filename
+            val fileName = "BlueOpen_Download.html"
             val file = File(cacheDir, fileName)
-            val content = "[InternetShortcut]\r\nURL=https://github.com/serresident/blueopen/releases/latest\r\n"
-            file.writeText(content, Charsets.UTF_8)
+            val htmlContent = """
+                <!DOCTYPE html>
+                <html lang="ru">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta http-equiv="refresh" content="1; url=https://github.com/serresident/blueopen/releases/latest">
+                    <title>Загрузка BlueOpen</title>
+                    <style>
+                        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #121217; color: #fff; text-align: center; padding: 60px 20px; }
+                        .card { background: #1e1e26; border-radius: 16px; padding: 30px; max-width: 480px; margin: 0 auto; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+                        h1 { font-size: 22px; margin-bottom: 12px; }
+                        p { color: #a0a0ab; font-size: 14px; line-height: 1.5; margin-bottom: 24px; }
+                        .btn { display: inline-block; background-color: #3f51b5; color: white; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: bold; font-size: 15px; }
+                    </style>
+                </head>
+                <body>
+                    <div class="card">
+                        <h1>BlueOpen для Windows</h1>
+                        <p>Переход к загрузке установщика...<br>Если страница не открылась автоматически, нажмите кнопку:</p>
+                        <a class="btn" href="https://github.com/serresident/blueopen/releases/latest">Скачать BlueOpenSetup.exe</a>
+                    </div>
+                    <script>
+                        window.location.href = "https://github.com/serresident/blueopen/releases/latest";
+                    </script>
+                </body>
+                </html>
+            """.trimIndent()
+            file.writeText(htmlContent, Charsets.UTF_8)
 
             val uri: Uri = FileProvider.getUriForFile(
                 this,
@@ -306,10 +340,12 @@ class MainActivity : AppCompatActivity() {
                 file
             )
 
+            // Do NOT include EXTRA_TEXT! On Android, setting EXTRA_TEXT causes Bluetooth Opp
+            // to send an object named with the URL itself (with slashes and colons), causing
+            // Windows Explorer to fail with 0x80004002 when saving to disk.
             val intent = Intent(Intent.ACTION_SEND).apply {
-                type = "*/*"
+                type = "text/html"
                 putExtra(Intent.EXTRA_STREAM, uri)
-                putExtra(Intent.EXTRA_TEXT, "BlueOpen Windows Installer: https://github.com/serresident/blueopen/releases/latest")
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 setPackage("com.android.bluetooth")
             }
@@ -319,15 +355,14 @@ class MainActivity : AppCompatActivity() {
                 startActivity(intent)
             } else {
                 val chooserIntent = Intent(Intent.ACTION_SEND).apply {
-                    type = "*/*"
+                    type = "text/html"
                     putExtra(Intent.EXTRA_STREAM, uri)
-                    putExtra(Intent.EXTRA_TEXT, "BlueOpen Windows Installer: https://github.com/serresident/blueopen/releases/latest")
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }
-                startActivity(Intent.createChooser(chooserIntent, "Передать ссылку на ПК через Bluetooth"))
+                startActivity(Intent.createChooser(chooserIntent, "Передать файл на ПК через Bluetooth"))
             }
 
-            Toast.makeText(this, "На ПК: нажмите Win+R -> fsquirt -> Принимать файлы", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Отправка BlueOpen_Download.html. На ПК выберите папку сохранения", Toast.LENGTH_LONG).show()
         } catch (e: Exception) {
             e.printStackTrace()
             Toast.makeText(this, "Ошибка передачи: ${e.message}", Toast.LENGTH_SHORT).show()
