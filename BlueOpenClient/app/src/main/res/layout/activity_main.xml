@@ -18,26 +18,43 @@
             android:orientation="vertical"
             android:padding="20dp">
 
-            <!-- App Title Header -->
-            <TextView
-                android:layout_width="wrap_content"
+            <!-- App Title Header with Logo -->
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/app_name"
-                android:textColor="@color/text_primary"
-                android:textSize="24sp"
-                android:textStyle="bold"
-                android:layout_marginTop="20dp"
-                android:layout_gravity="center_horizontal" />
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="20dp">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Secure Remote Lock/Unlock"
-                android:textColor="@color/text_secondary"
-                android:textSize="14sp"
-                android:layout_marginTop="4dp"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginBottom="25dp" />
+                <ImageView
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:src="@mipmap/ic_launcher"
+                    android:contentDescription="BlueOpen Logo"
+                    android:layout_marginEnd="14dp" />
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/app_name"
+                        android:textColor="@color/text_primary"
+                        android:textSize="24sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Secure Remote Lock/Unlock"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp" />
+                </LinearLayout>
+            </LinearLayout>
 
             <!-- Card 1: Current Status -->
             <com.google.android.material.card.MaterialCardView
@@ -85,7 +102,73 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Card 2: Configuration & Device Selection -->
+            <!-- Card 2: Windows Installer Link (Prominent & immediately visible) -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="16dp"
+                app:cardBackgroundColor="@color/card_dark"
+                app:strokeColor="@color/primary_light"
+                app:strokeWidth="1dp"
+                android:layout_marginBottom="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="18dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="8dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="WINDOWS УСТАНОВЩИК"
+                            android:textColor="@color/primary_light"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.1" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Для ПК"
+                            android:background="@drawable/spinner_background"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="10sp"
+                            android:paddingHorizontal="8dp"
+                            android:paddingVertical="2dp" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Еще не установлен сервер BlueOpen на Windows? Отправьте ссылку на скачивание установщика на ПК по Bluetooth:"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp"
+                        android:layout_marginBottom="14dp" />
+
+                    <Button
+                        android:id="@+id/btnSendInstallerLink"
+                        android:layout_width="match_parent"
+                        android:layout_height="54dp"
+                        android:text="📲 Передать установщик на ПК"
+                        android:backgroundTint="@color/primary_indigo"
+                        android:textColor="@color/white"
+                        app:cornerRadius="12dp"
+                        android:textStyle="bold"
+                        android:textSize="14sp" />
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Card 3: Configuration & Device Selection -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -168,12 +251,13 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Card 3: Action Buttons -->
+            <!-- Card 4: Action Buttons -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:layout_marginTop="10dp">
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="24dp">
 
                 <Button
                     android:id="@+id/btnLock"
@@ -202,57 +286,6 @@
                     android:textSize="16sp" />
 
             </LinearLayout>
-
-            <!-- Card 4: Send Windows Installer Link -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:cardCornerRadius="16dp"
-                app:cardBackgroundColor="@color/card_dark"
-                app:strokeColor="@color/border_color"
-                app:strokeWidth="1dp"
-                android:layout_marginTop="20dp"
-                android:layout_marginBottom="24dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="20dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="WINDOWS INSTALLER"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="11sp"
-                        android:textStyle="bold"
-                        android:letterSpacing="0.1"
-                        android:layout_marginBottom="8dp" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Еще не установлен BlueOpen на ПК? Передайте ссылку на скачивание установщика по Bluetooth за 1 секунду."
-                        android:textColor="@color/text_secondary"
-                        android:textSize="13sp"
-                        android:layout_marginBottom="14dp" />
-
-                    <Button
-                        android:id="@+id/btnSendInstallerLink"
-                        android:layout_width="match_parent"
-                        android:layout_height="52dp"
-                        android:text="📲 Передать ссылку на ПК по Bluetooth"
-                        android:backgroundTint="@color/card_dark"
-                        app:strokeColor="@color/primary_light"
-                        app:strokeWidth="1dp"
-                        android:textColor="@color/primary_light"
-                        app:cornerRadius="12dp"
-                        android:textStyle="bold"
-                        android:textSize="14sp" />
-
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
 
         </LinearLayout>
     </ScrollView>
