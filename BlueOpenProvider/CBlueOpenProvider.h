@@ -8,7 +8,8 @@ enum BLUEOPEN_FIELD_ID
     FID_LOGO = 0,
     FID_TITLE = 1,
     FID_STATUS = 2,
-    FID_NUM_FIELDS = 3,
+    FID_NET_REQUEST_BUTTON = 3,
+    FID_NUM_FIELDS = 4,
 };
 
 class CBlueOpenProvider : public ICredentialProvider, public ICredentialProviderSetUserArray

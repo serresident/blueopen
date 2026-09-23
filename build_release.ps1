@@ -52,7 +52,34 @@ if ($LASTEXITCODE -eq 0) {
     Write-Host "`nInstaller build failed." -ForegroundColor Red
 }
 
-Write-Host "`n4. Copying Android APK to ReleaseBuild folder for GitHub..." -ForegroundColor Cyan
+Write-Host "`n4. Building Android Client (BlueOpenClient.apk)..." -ForegroundColor Cyan
+$javaCandidates = @(
+    "C:\Program Files\Android\Android Studio\jbr",
+    "C:\Program Files\Android\jdk\jdk-8.0.302.8-hotspot\jdk8u302-b08"
+)
+$foundJava = $null
+foreach ($j in $javaCandidates) {
+    if (Test-Path "$j\bin\java.exe") {
+        $foundJava = $j
+        break
+    }
+}
+if ($foundJava) {
+    $env:JAVA_HOME = $foundJava
+    $env:JAVA_TOOL_OPTIONS = "-Dfile.encoding=UTF-8"
+    $env:GRADLE_OPTS = "-Dfile.encoding=UTF-8"
+    $env:PATH = "$foundJava\bin;$env:PATH"
+    Push-Location ".\BlueOpenClient"
+    try {
+        cmd /c "gradlew.bat assembleRelease --no-daemon"
+    } finally {
+        Pop-Location
+    }
+} else {
+    Write-Warning "Java not found. Skipping Android compilation and using existing APK."
+}
+
+Write-Host "`n5. Copying Android APK to ReleaseBuild folder for GitHub..." -ForegroundColor Cyan
 $ApkCandidates = @(
     ".\BlueOpenClient\app\build\outputs\apk\release\app-release.apk",
     ".\BlueOpenClient\app\build\outputs\apk\release\app-release-unsigned.apk",

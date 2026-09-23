@@ -2,11 +2,14 @@
 #include <credentialprovider.h>
 #include <stdio.h>
 #include <iostream>
+#include <io.h>
+#include <fcntl.h>
 #include "guid.h"
 #include "resource.h"
 
 int main()
 {
+    _setmode(_fileno(stdout), _O_U16TEXT);
     std::wcout << L"========================================\n";
     std::wcout << L"  BlueOpen Credential Provider Tester   \n";
     std::wcout << L"========================================\n\n";
@@ -76,7 +79,7 @@ int main()
     // Field count
     DWORD dwFieldCount = 0;
     pProvider->GetFieldDescriptorCount(&dwFieldCount);
-    std::wcout << L"[PASS] Field count = " << dwFieldCount << L" (Expected: 3)\n";
+    std::wcout << L"[PASS] Field count = " << dwFieldCount << L" (Expected: 4)\n";
 
     for (DWORD i = 0; i < dwFieldCount; ++i)
     {
@@ -167,6 +170,16 @@ int main()
     pCred->GetStringValue(2, &pszStatus);
     std::wcout << L"[PASS] Status: '" << (pszStatus ? pszStatus : L"(null)") << L"'\n";
     if (pszStatus) CoTaskMemFree(pszStatus);
+
+    WCHAR* pszBtn = nullptr;
+    pCred->GetStringValue(3, &pszBtn);
+    std::wcout << L"[PASS] Net Button: '" << (pszBtn ? pszBtn : L"(null)") << L"'\n";
+    if (pszBtn) CoTaskMemFree(pszBtn);
+
+    // Test CommandLinkClicked on FID_NET_REQUEST_BUTTON
+    std::wcout << L"[TEST] Calling CommandLinkClicked(FID_NET_REQUEST_BUTTON)...\n";
+    HRESULT hrCmd = pCred->CommandLinkClicked(3);
+    std::wcout << L"[PASS] CommandLinkClicked returned: 0x" << std::hex << hrCmd << L"\n";
 
     // Test Named Pipe IPC by simulating an unlock signal
     std::wcout << L"\n--- Testing Named Pipe IPC ---\n";

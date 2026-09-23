@@ -211,8 +211,9 @@ HRESULT CBlueOpenProvider::UnAdvise()
 
 static const CREDENTIAL_PROVIDER_FIELD_DESCRIPTOR s_rgFieldDescriptors[] = {
     { FID_LOGO, CPFT_TILE_IMAGE, (LPWSTR)L"Logo", GUID_NULL },
-    { FID_TITLE, CPFT_LARGE_TEXT, (LPWSTR)L"BlueOpen Bluetooth Unlocker", GUID_NULL },
+    { FID_TITLE, CPFT_LARGE_TEXT, (LPWSTR)L"BlueOpen Bluetooth & Net", GUID_NULL },
     { FID_STATUS, CPFT_SMALL_TEXT, (LPWSTR)L"Status", GUID_NULL },
+    { FID_NET_REQUEST_BUTTON, CPFT_COMMAND_LINK, (LPWSTR)L"🌐 Запросить вход через интернет", GUID_NULL },
 };
 
 HRESULT CBlueOpenProvider::GetFieldDescriptorCount(_Out_ DWORD* pdwCount)

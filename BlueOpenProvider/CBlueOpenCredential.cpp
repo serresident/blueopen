@@ -318,13 +318,12 @@ HRESULT CBlueOpenCredential::GetFieldState(_In_ DWORD dwFieldID, _Out_ CREDENTIA
     switch (dwFieldID)
     {
     case FID_LOGO:
-        *pcpfs = CPFS_DISPLAY_IN_BOTH;
-        break;
     case FID_TITLE:
-        *pcpfs = CPFS_DISPLAY_IN_BOTH;
-        break;
     case FID_STATUS:
         *pcpfs = CPFS_DISPLAY_IN_BOTH;
+        break;
+    case FID_NET_REQUEST_BUTTON:
+        *pcpfs = CPFS_DISPLAY_IN_SELECTED_TILE;
         break;
     default:
         *pcpfs = CPFS_HIDDEN;
@@ -345,6 +344,9 @@ HRESULT CBlueOpenCredential::GetStringValue(_In_ DWORD dwFieldID, _Outptr_ WCHAR
         break;
     case FID_STATUS:
         src = _szStatusText;
+        break;
+    case FID_NET_REQUEST_BUTTON:
+        src = L"🌐 Запросить вход через интернет";
         break;
     }
 
@@ -403,6 +405,76 @@ HRESULT CBlueOpenCredential::SetDwordValue(_In_ DWORD dwFieldID, _In_ DWORD dwVa
 
 HRESULT CBlueOpenCredential::CommandLinkClicked(_In_ DWORD dwFieldID)
 {
+    if (dwFieldID == FID_NET_REQUEST_BUTTON)
+    {
+        WriteLog("[BlueOpen] FID_NET_REQUEST_BUTTON clicked on lock screen!\n");
+
+        wcscpy_s(_szStatusText, L"Отправка запроса на смартфон...");
+
+        // Connect to BlueOpenNetTriggerPipe created by BlueOpenServer
+        HANDLE hPipe = CreateFileW(
+            L"\\\\.\\pipe\\BlueOpenNetTriggerPipe",
+            GENERIC_READ | GENERIC_WRITE,
+            0,
+            NULL,
+            OPEN_EXISTING,
+            0,
+            NULL
+        );
+
+        if (hPipe != INVALID_HANDLE_VALUE)
+        {
+            DWORD bytesWritten = 0;
+            const char* msg = "TRIGGER_NET_UNLOCK\n";
+            WriteFile(hPipe, msg, (DWORD)strlen(msg), &bytesWritten, NULL);
+
+            char resp[64] = { 0 };
+            DWORD bytesRead = 0;
+            if (ReadFile(hPipe, resp, sizeof(resp) - 1, &bytesRead, NULL) && bytesRead > 0)
+            {
+                resp[bytesRead] = '\0';
+                if (strstr(resp, "SENT") != nullptr)
+                {
+                    wcscpy_s(_szStatusText, L"Запрос отправлен. Подтвердите вход на смартфоне (60с)...");
+                }
+                else if (strstr(resp, "DISABLED") != nullptr)
+                {
+                    wcscpy_s(_szStatusText, L"BlueOpen Net отключен в настройках сервера.");
+                }
+                else
+                {
+                    wcscpy_s(_szStatusText, L"Запрос отправлен. Ожидание ответа...");
+                }
+            }
+            CloseHandle(hPipe);
+        }
+        else
+        {
+            WriteLog("[BlueOpen] Failed to connect to BlueOpenNetTriggerPipe, error = %d\n", GetLastError());
+            wcscpy_s(_szStatusText, L"Служба BlueOpenServer не запущена.");
+        }
+
+        // Notify UI to update status text
+        IGlobalInterfaceTable* pGIT = nullptr;
+        HRESULT hr = CoCreateInstance(CLSID_StdGlobalInterfaceTable, NULL, CLSCTX_INPROC_SERVER, IID_IGlobalInterfaceTable, (void**)&pGIT);
+        if (SUCCEEDED(hr) && pGIT != nullptr)
+        {
+            if (_dwProviderEventsCookie != 0)
+            {
+                ICredentialProviderEvents* pEvents = nullptr;
+                hr = pGIT->GetInterfaceFromGlobal(_dwProviderEventsCookie, IID_ICredentialProviderEvents, (void**)&pEvents);
+                if (SUCCEEDED(hr) && pEvents != nullptr)
+                {
+                    pEvents->CredentialsChanged(_upAdviseContext);
+                    pEvents->Release();
+                }
+            }
+            pGIT->Release();
+        }
+
+        return S_OK;
+    }
+
     return E_NOTIMPL;
 }
 

@@ -20,6 +20,7 @@ namespace BlueOpenServer
     public partial class MainWindow : Window
     {
         private readonly BluetoothServer _bluetoothServer;
+        private readonly NetRelayManager _netRelay;
         private AppConfig _config = new();
         private const string ConfigFileName = "config.json";
         private readonly string _configFilePath;
@@ -68,6 +69,11 @@ namespace BlueOpenServer
             _bluetoothServer.UnlockRequested += OnRemoteUnlockRequested;
             _bluetoothServer.LockRequested += OnRemoteLockRequested;
 
+            _netRelay = new NetRelayManager(() => _config);
+            _netRelay.LogMessage += OnServerLog;
+            _netRelay.UnlockConfirmed += OnRemoteUnlockRequested;
+            _netRelay.Start();
+
             StateChanged += MainWindow_StateChanged;
 
             InitializeTrayIcon();
@@ -85,6 +91,10 @@ namespace BlueOpenServer
             TxtWinUsername.Text = _config.WinUsername;
             TxtWinDomain.Text = _config.WinDomain;
             TxtWinPassword.Password = _config.WinPassword;
+
+            // Apply Net config to UI
+            ChkNetUnlockEnabled.IsChecked = _config.NetUnlockEnabled;
+            TxtNetChannelId.Text = _netRelay.GetEffectiveTopic();
 
             // Setup Version UI
             TxtVersion.Text = $"v{UpdateManager.CurrentVersion}";
@@ -487,6 +497,7 @@ namespace BlueOpenServer
             }
             else
             {
+                _netRelay?.Dispose();
                 _bluetoothServer.Stop();
                 if (_notifyIcon != null)
                 {
@@ -638,6 +649,61 @@ namespace BlueOpenServer
                 _menuItemAutostart.Checked = _config.Autostart;
             }
         }
+
+        private void ChkNetUnlockEnabled_Checked(object sender, RoutedEventArgs e)
+        {
+            _config.NetUnlockEnabled = true;
+            SaveConfig();
+            Log("[NetRelay] Удаленная разблокировка через интернет включена.");
+        }
+
+        private void ChkNetUnlockEnabled_Unchecked(object sender, RoutedEventArgs e)
+        {
+            _config.NetUnlockEnabled = false;
+            SaveConfig();
+            Log("[NetRelay] Удаленная разблокировка через интернет отключена.");
+        }
+
+        private void BtnCopyNetChannel_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                string topic = _netRelay.GetEffectiveTopic();
+                System.Windows.Clipboard.SetText(topic);
+                System.Windows.MessageBox.Show($"ID канала скопирован в буфер обмена:\n\n{topic}\n\nВставьте этот ID в приложение BlueOpen на смартфоне в разделе 'Удаленный вход'.", "BlueOpen Net", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"Ошибка копирования: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private async void BtnTestNetNotification_Click(object sender, RoutedEventArgs e)
+        {
+            BtnTestNetNotification.IsEnabled = false;
+            BtnTestNetNotification.Content = "Отправка...";
+            try
+            {
+                bool ok = await _netRelay.SendTestNotificationAsync();
+                if (ok)
+                {
+                    System.Windows.MessageBox.Show("Тестовое уведомление успешно отправлено в канал!\nПроверьте приложение BlueOpen на смартфоне.", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                else
+                {
+                    System.Windows.MessageBox.Show("Не удалось отправить тестовое уведомление. Проверьте подключение к интернету.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"Ошибка отправки: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                BtnTestNetNotification.IsEnabled = true;
+                BtnTestNetNotification.Content = "Тест на телефон";
+            }
+        }
     }
 
     public class AppConfig
@@ -648,5 +714,8 @@ namespace BlueOpenServer
         public string WinUsername { get; set; } = Environment.UserName;
         public string WinDomain { get; set; } = Environment.UserDomainName;
         public string WinPassword { get; set; } = "";
+        public bool NetUnlockEnabled { get; set; } = true;
+        public string NetChannelId { get; set; } = "";
+        public string NetServerUrl { get; set; } = "https://ntfy.sh";
     }
 }

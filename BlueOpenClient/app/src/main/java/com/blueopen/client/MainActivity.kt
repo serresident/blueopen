@@ -9,22 +9,26 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Toast
-import android.net.Uri
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import com.blueopen.client.databinding.ActivityMainBinding
+import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.File
 import java.io.InputStreamReader
 import java.io.OutputStream
+import java.net.HttpURLConnection
+import java.net.URL
 import java.security.MessageDigest
 import java.util.UUID
 
@@ -38,11 +42,13 @@ class MainActivity : AppCompatActivity() {
     private val PREFS_NAME = "BlueOpenPrefs"
     private val KEY_LAST_DEVICE = "LastDeviceAddress"
     private val KEY_PASSWORD = "SavedPassword"
+    private val KEY_NET_CHANNEL = "NetChannelId"
 
     // Custom Service UUID for RFCOMM (Must match the C# Server)
     private val SERVICE_UUID = UUID.fromString("4a982c5e-0c12-40f4-8a48-4a5f4a7c1b52")
     private val PERMISSION_REQUEST_CODE = 101
     private val REQUEST_ENABLE_BT = 102
+    private val PERMISSION_NOTIFICATION_CODE = 104
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -62,6 +68,7 @@ class MainActivity : AppCompatActivity() {
         loadSettings()
         setupListeners()
         checkPermissionsAndLoadDevices()
+        handleIntent(intent)
     }
 
     private fun setupListeners() {
@@ -98,6 +105,63 @@ class MainActivity : AppCompatActivity() {
             }
 
             override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+
+        binding.btnSaveNetChannel.setOnClickListener {
+            if (NetUnlockService.isRunning) {
+                NetUnlockService.stop(this)
+                updateNetStatusUI(false)
+                Toast.makeText(this, "BlueOpen Net остановлен", Toast.LENGTH_SHORT).show()
+            } else {
+                val channel = binding.etNetChannel.text.toString().trim()
+                if (channel.isEmpty()) {
+                    Toast.makeText(this, "Введите ID канала (например: bo_...)", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+                saveNetChannel(channel)
+                checkNotificationPermission()
+                NetUnlockService.start(this, channel)
+                updateNetStatusUI(true)
+                Toast.makeText(this, "BlueOpen Net подключен: $channel", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        binding.btnTestNet.setOnClickListener {
+            val channel = binding.etNetChannel.text.toString().trim()
+            if (channel.isEmpty()) {
+                Toast.makeText(this, "Сначала укажите ID канала", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            Toast.makeText(this, "Отправка тестового сигнала...", Toast.LENGTH_SHORT).show()
+            Thread {
+                try {
+                    val url = URL("https://ntfy.sh/$channel")
+                    val conn = url.openConnection() as HttpURLConnection
+                    conn.requestMethod = "POST"
+                    conn.doOutput = true
+                    conn.setRequestProperty("Content-Type", "application/json; charset=utf-8")
+                    conn.setRequestProperty("Title", "Тест связи BlueOpen Net")
+                    conn.setRequestProperty("Tags", "white_check_mark,bell")
+                    val payload = JSONObject().apply {
+                        put("type", "TEST")
+                        put("machine", "Android (${Build.MODEL})")
+                    }
+                    conn.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
+                    val code = conn.responseCode
+                    conn.disconnect()
+                    runOnUiThread {
+                        if (code in 200..299) {
+                            Toast.makeText(this@MainActivity, "Тестовое сообщение успешно отправлено!", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(this@MainActivity, "Ошибка сервера ntfy: HTTP $code", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                } catch (e: Exception) {
+                    runOnUiThread {
+                        Toast.makeText(this@MainActivity, "Ошибка отправки: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }.start()
         }
     }
 
@@ -294,10 +358,20 @@ class MainActivity : AppCompatActivity() {
         prefs.edit().putString(KEY_PASSWORD, password).apply()
     }
 
+    private fun saveNetChannel(channel: String) {
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putString(KEY_NET_CHANNEL, channel).apply()
+    }
+
     private fun loadSettings() {
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val savedPassword = prefs.getString(KEY_PASSWORD, "")
         binding.etPassword.setText(savedPassword)
+
+        val savedChannel = prefs.getString(KEY_NET_CHANNEL, "")
+        if (!savedChannel.isNullOrEmpty()) {
+            binding.etNetChannel.setText(savedChannel)
+        }
     }
 
     private fun sendInstallerLinkViaBluetooth() {
@@ -376,6 +450,92 @@ class MainActivity : AppCompatActivity() {
                 loadPairedDevices()
             } else {
                 Toast.makeText(this, "Bluetooth needs to be enabled to find devices", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleIntent(intent)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        updateNetStatusUI(NetUnlockService.isRunning)
+
+        NetUnlockService.onStatusChanged = { running ->
+            runOnUiThread { updateNetStatusUI(running) }
+        }
+
+        NetUnlockService.onUnlockRequestReceived = { reqId, machine, user ->
+            runOnUiThread { showUnlockConfirmDialog(reqId, machine, user) }
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        NetUnlockService.onStatusChanged = null
+        NetUnlockService.onUnlockRequestReceived = null
+    }
+
+    private fun handleIntent(intent: Intent?) {
+        if (intent == null) return
+
+        if (intent.hasExtra("NET_REQUEST_ID")) {
+            val reqId = intent.getStringExtra("NET_REQUEST_ID") ?: ""
+            val machine = intent.getStringExtra("NET_MACHINE") ?: "Windows PC"
+            val user = intent.getStringExtra("NET_USER") ?: ""
+            if (reqId.isNotEmpty()) {
+                showUnlockConfirmDialog(reqId, machine, user)
+            }
+        } else if (intent.action == Intent.ACTION_VIEW && intent.data?.scheme == "blueopen") {
+            val reqId = intent.data?.getQueryParameter("reqId") ?: ""
+            val channel = intent.data?.getQueryParameter("channel") ?: ""
+            if (reqId.isNotEmpty()) {
+                showUnlockConfirmDialog(reqId, "Windows PC", "")
+            }
+        }
+    }
+
+    private fun showUnlockConfirmDialog(requestId: String, machine: String, user: String) {
+        AlertDialog.Builder(this)
+            .setTitle("🌐 Запрос на вход в ПК")
+            .setMessage("Компьютер $machine ожидает подтверждения входа через BlueOpen Net для пользователя $user.\n\nРазблокировать компьютер?")
+            .setPositiveButton("Разблокировать") { _, _ ->
+                val channel = binding.etNetChannel.text.toString().trim()
+                NetUnlockService.confirmUnlock(this, requestId, channel)
+            }
+            .setNegativeButton("Отклонить") { _, _ ->
+                val channel = binding.etNetChannel.text.toString().trim()
+                NetUnlockService.rejectUnlock(this, requestId, channel)
+            }
+            .setCancelable(false)
+            .show()
+    }
+
+    private fun updateNetStatusUI(running: Boolean) {
+        if (running) {
+            binding.tvNetStatusBadge.text = "В сети (активен)"
+            binding.tvNetStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.green_success))
+            binding.btnSaveNetChannel.text = "Отключить"
+            binding.btnSaveNetChannel.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.accent_red))
+        } else {
+            binding.tvNetStatusBadge.text = "Остановлен"
+            binding.tvNetStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.accent_red))
+            binding.btnSaveNetChannel.text = "Подключить"
+            binding.btnSaveNetChannel.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.primary_indigo))
+        }
+    }
+
+    private fun checkNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                    PERMISSION_NOTIFICATION_CODE
+                )
             }
         }
     }
